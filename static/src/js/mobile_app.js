@@ -1337,7 +1337,7 @@
                 case 'disetujui':
                     return ev.can_lapor
                         ? { type: 'success', icon: 'fa-check-circle', text: 'Event disetujui & didanai. Tandai survey selama event, lalu isi berita acara setelah selesai.' }
-                        : { type: 'success', icon: 'fa-check-circle', text: 'Event disetujui & didanai. Berita acara bisa diisi setelah event dimulai.' };
+                        : { type: 'success', icon: 'fa-check-circle', text: `Event disetujui & didanai. Mulai ${fmtDate(ev.mulai)}, tombol "+ Survey" untuk menandai survey event dan tombol berita acara akan muncul di bawah halaman ini.` };
                 case 'laporan':
                     return { type: 'warning', icon: 'fa-hourglass-half', text: 'Berita acara terkirim, menunggu verifikasi admin pusat.' };
                 default:
