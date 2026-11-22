@@ -1,4 +1,8 @@
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import AccessError
+
+# Field profil yang boleh diubah sendiri oleh user grup Relawan.
+RELAWAN_SELF_EDITABLE = {'alamat', 'foto', 'foto_filename'}
 
 
 class Relawan(models.Model):
@@ -54,6 +58,22 @@ class Relawan(models.Model):
             user = rec.user_ids[:1]
             rec.has_user = bool(user)
             rec.linked_username = user.login if user else False
+
+    def write(self, vals):
+        user = self.env.user
+        if (
+            not self.env.su
+            and user.has_group('smartpolling.group_relawan')
+            and not user.has_group('smartpolling.group_admin')
+        ):
+            blocked = [
+                f for f in vals
+                if f not in RELAWAN_SELF_EDITABLE
+                and not f.startswith(('message_', 'activity_'))
+            ]
+            if blocked:
+                raise AccessError(_('Relawan hanya dapat mengubah foto dan alamat pada profilnya sendiri.'))
+        return super().write(vals)
 
     def action_set_aktif(self):
         self.write({'state': 'aktif'})

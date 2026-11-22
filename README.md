@@ -10,7 +10,7 @@ Modul **Odoo 19** untuk manajemen data pemenangan pemilu berbasis wilayah: penda
 - **DPT** — biodata pemilih (NIK unik), koordinat GPS yang bisa diatur lewat peta Leaflet (drag marker), dan status verifikasi.
 - **Survey (Voter)** — riwayat kunjungan survey preferensi per DPT (memilih / ragu-ragu / belum menentukan / tidak memilih) dengan foto dokumentasi; tiap survey otomatis tercatat di chatter DPT.
 - **Dashboard** — KPI ringkas, peta choropleth 3 level dengan drill-down dan marker cluster titik DPT, serta grafik ECharts (distribusi pilihan, survey per petugas, tren 30 hari).
-- **App Mobile Relawan** (`/smartpolling`) — aplikasi web mobile-first berbasis Owl: beranda KPI, input DPT dengan GPS, input survey dengan kompresi foto, dan profil.
+- **App Mobile Relawan** (`/mobile`) — aplikasi web mobile-first berbasis Owl: beranda KPI, input DPT dengan GPS, input survey dengan kompresi foto, dan profil.
 
 ## Hak Akses
 
@@ -44,7 +44,7 @@ Data wilayah (kabupaten/kecamatan/desa beserta GeoJSON) **tidak** disertakan dal
 ## Penggunaan
 
 - **Backend**: menu **SmartPolling** → Dashboard, Data Wilayah, Relawan, TPS, DPT, Hasil Survey.
-- **App mobile relawan**: buka `http://<host>:8069/smartpolling` dan login dengan akun relawan (user harus memiliki *Relawan Terkait*).
+- **App mobile relawan**: buka `http://<host>:8069/mobile` dan login dengan akun relawan (user harus memiliki *Relawan Terkait*).
 
 ## Struktur
 

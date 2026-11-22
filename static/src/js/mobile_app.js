@@ -724,12 +724,12 @@
         onLogoutOverlayClick(e) {
             if (e.target === e.currentTarget) this.state.confirmLogout = false;
         }
-        logout() { window.location.href = '/smartpolling/logout'; }
+        logout() { window.location.href = '/mobile/logout'; }
 
         // ── KPI ────────────────────────────────────────────────────────────
         async _loadKpi() {
             try {
-                const res = await rpc('/smartpolling/api/kpi', {});
+                const res = await rpc('/mobile/api/kpi', {});
                 if (res.error) return;
                 this.state.kpi = res;
             } catch (e) { console.error(e); }
@@ -737,7 +737,7 @@
 
         async _loadWeeklyChart() {
             try {
-                const res = await rpc('/smartpolling/api/weekly', {});
+                const res = await rpc('/mobile/api/weekly', {});
                 const days = (res && res.days) || [];
                 const el = this.weeklyChartRef?.el;
                 if (!el || typeof echarts === 'undefined' || !days.length) return;
@@ -795,7 +795,7 @@
             this.state.dptListLoading = true;
             if (reset) this.state.dptList = [];
             try {
-                const res = await rpc('/smartpolling/api/dpt/list', Object.assign({
+                const res = await rpc('/mobile/api/dpt/list', Object.assign({
                     offset: reset ? 0 : this.state.dptList.length,
                     limit: 20,
                     search: this.state.dptSearch || null,
@@ -819,7 +819,7 @@
             this.state.dptDetail = null;
             this.state.dptDetailLoading = true;
             try {
-                const res = await rpc('/smartpolling/api/dpt/record', { dpt_id: id });
+                const res = await rpc('/mobile/api/dpt/record', { dpt_id: id });
                 if (res.error) { this.toast('Gagal memuat detail DPT', 'error'); this.state.subpage = null; return; }
                 this.state.dptDetail = res;
             } catch (e) {
@@ -837,7 +837,7 @@
         }
         async _loadTpsOptions() {
             try {
-                const res = await rpc('/smartpolling/api/dpt/tps_options', {});
+                const res = await rpc('/mobile/api/dpt/tps_options', {});
                 this.state.tpsOptions = res.records || [];
             } catch (e) { console.error(e); }
         }
@@ -902,7 +902,7 @@
 
             this.state.submitting = true;
             try {
-                const res = await rpc('/smartpolling/api/dpt/create', { data: f });
+                const res = await rpc('/mobile/api/dpt/create', { data: f });
                 if (res.error) return this.toast(res.error, 'error');
                 this.toast('DPT berhasil ditambahkan', 'success');
                 this.state.subpage = null;
@@ -922,7 +922,7 @@
             this.state.surveyListLoading = true;
             if (reset) this.state.surveyList = [];
             try {
-                const res = await rpc('/smartpolling/api/survey/list', {
+                const res = await rpc('/mobile/api/survey/list', {
                     offset: reset ? 0 : this.state.surveyList.length,
                     limit: 20,
                 });
@@ -953,7 +953,7 @@
             this._pickTimer = setTimeout(async () => {
                 this.state.dptPickLoading = true;
                 try {
-                    const res = await rpc('/smartpolling/api/dpt/list', { offset: 0, limit: 10, search: q });
+                    const res = await rpc('/mobile/api/dpt/list', { offset: 0, limit: 10, search: q });
                     this.state.dptPickResults = res.records || [];
                 } catch (e) { /* ignore */ } finally {
                     this.state.dptPickLoading = false;
@@ -987,7 +987,7 @@
 
             this.state.submitting = true;
             try {
-                const res = await rpc('/smartpolling/api/survey/create', {
+                const res = await rpc('/mobile/api/survey/create', {
                     dpt_id: f.dpt_id, pilihan: f.pilihan, foto: f.fotoBase64 || null,
                 });
                 if (res.error) return this.toast(res.error, 'error');
@@ -1010,7 +1010,7 @@
             if (!file) return;
             try {
                 const dataUrl = await compressImage(file);
-                const res = await rpc('/smartpolling/api/profile/update_photo', { foto: dataUrl.split(',')[1] });
+                const res = await rpc('/mobile/api/profile/update_photo', { foto: dataUrl.split(',')[1] });
                 if (res.error) return this.toast(res.error, 'error');
                 this.state.avatarSrc = dataUrl;
                 this.toast('Foto profil diperbarui', 'success');

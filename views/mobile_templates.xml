@@ -3,7 +3,7 @@
 
     <!-- ═══════════════════════════════════════════════════════════
          LOGIN PAGE — SmartPolling Mobile
-         URL: /smartpolling/login
+         URL: /mobile/login
          ════════════════════════════════════════════════════════ -->
     <template id="template_relawan_login" name="SmartPolling – Login">
         <html lang="id">
@@ -19,7 +19,7 @@
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
                 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;display=swap"/>
                 <link rel="stylesheet" href="/smartpolling/static/lib/fontawesome/css/font-awesome.css"/>
-                <link rel="stylesheet" type="text/css" t-attf-href="/smartpolling/static/src/css/mobile_app.css?v=20260804a"/>
+                <link rel="stylesheet" type="text/css" t-attf-href="/smartpolling/static/src/css/mobile_app.css?v=20261122a"/>
             </head>
             <body>
 
@@ -52,7 +52,7 @@
                                 </div>
                             </t>
 
-                            <form id="sm-login-form" method="POST" action="/smartpolling/login" autocomplete="on">
+                            <form id="sm-login-form" method="POST" action="/mobile/login" autocomplete="on">
                                 <input type="hidden" name="redirect" t-att-value="redirect"/>
 
                                 <div class="sm-field">
@@ -141,7 +141,7 @@
 
     <!-- ═══════════════════════════════════════════════════════════
          APP SHELL — SmartPolling Mobile (OWL)
-         URL: /smartpolling/app
+         URL: /mobile/app
          ════════════════════════════════════════════════════════ -->
     <template id="template_relawan_app" name="SmartPolling – Mobile App">
         <html lang="id">
@@ -158,7 +158,7 @@
                 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;display=swap"/>
                 <link rel="stylesheet" href="/smartpolling/static/lib/fontawesome/css/font-awesome.css"/>
                 <link rel="stylesheet" type="text/css" href="/smartpolling/static/lib/leaflet/leaflet.css"/>
-                <link rel="stylesheet" type="text/css" t-attf-href="/smartpolling/static/src/css/mobile_app.css?v=20260804a"/>
+                <link rel="stylesheet" type="text/css" t-attf-href="/smartpolling/static/src/css/mobile_app.css?v=20261122a"/>
             </head>
             <body>
 
@@ -167,7 +167,7 @@
                 <script type="text/javascript" src="/smartpolling/static/lib/leaflet/leaflet.js"/>
                 <script type="text/javascript" src="/smartpolling/static/lib/echart/echarts.min.js"/>
                 <script type="text/javascript" src="/web/static/lib/owl/owl.js"/>
-                <script type="text/javascript" t-attf-src="/smartpolling/static/src/js/mobile_app.js?v=20260804a"/>
+                <script type="text/javascript" t-attf-src="/smartpolling/static/src/js/mobile_app.js?v=20261122a"/>
 
             </body>
         </html>

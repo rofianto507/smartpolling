@@ -28,9 +28,9 @@
                         <button name="action_open_create_user_wizard" string="Buat User" type="object"
                             class="btn-secondary" invisible="user_ids" groups="smartpolling.group_admin"/>
                         <button name="action_set_non_aktif" string="Non Aktifkan" type="object"
-                            class="btn-danger" invisible="state == 'non_aktif'"/>
+                            class="btn-danger" invisible="state == 'non_aktif'" groups="smartpolling.group_admin"/>
                         <button name="action_set_aktif" string="Aktifkan Kembali" type="object"
-                            class="btn-secondary" invisible="state == 'aktif'"/>
+                            class="btn-secondary" invisible="state == 'aktif'" groups="smartpolling.group_admin"/>
                         <field name="state" widget="statusbar" statusbar_visible="aktif,non_aktif"/>
                     </header>
                     <sheet>

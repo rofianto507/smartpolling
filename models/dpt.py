@@ -1,4 +1,5 @@
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import AccessError
 
 
 class Dpt(models.Model):
@@ -60,6 +61,40 @@ class Dpt(models.Model):
     ], string='Pilihan Terakhir', compute='_compute_pilihan_terakhir', store=True)
 
     _nik_unique = models.Constraint('UNIQUE(nik)', 'NIK ini sudah terdaftar di DPT!')
+
+    # ── Guard grup Relawan (backend/RPC) ───────────────────────────
+    # Controller mobile memakai sudo() dan memvalidasi sendiri, jadi env.su dilewati.
+    def _is_relawan_only(self):
+        user = self.env.user
+        return (
+            not self.env.su
+            and user.has_group('smartpolling.group_relawan')
+            and not user.has_group('smartpolling.group_admin')
+        )
+
+    def _check_relawan_tps(self, tps_id):
+        if not tps_id:
+            return
+        tps = self.env['smartpolling.tps'].sudo().browse(tps_id)
+        rid = self.env.user.relawan_id.id
+        if not rid or tps.relawan_id.id != rid:
+            raise AccessError(_('Anda hanya dapat mendata DPT pada TPS yang Anda koordinasi.'))
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        if self._is_relawan_only():
+            for vals in vals_list:
+                if vals.get('state', 'baru') != 'baru':
+                    raise AccessError(_('Hanya administrator yang dapat mengubah status verifikasi DPT.'))
+                self._check_relawan_tps(vals.get('tps_id'))
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if self._is_relawan_only():
+            if 'state' in vals:
+                raise AccessError(_('Hanya administrator yang dapat mengubah status verifikasi DPT.'))
+            self._check_relawan_tps(vals.get('tps_id'))
+        return super().write(vals)
 
     @api.depends('voter_ids')
     def _compute_voter_count(self):

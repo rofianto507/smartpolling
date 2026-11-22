@@ -59,22 +59,22 @@ class SmartPollingMobileController(http.Controller):
     # ─────────────────────────────────────────────────────────────
     # PAGE ROUTES
     # ─────────────────────────────────────────────────────────────
-    @http.route('/smartpolling', type='http', auth='public', csrf=False, website=False)
+    @http.route('/mobile', type='http', auth='public', csrf=False, website=False)
     def sm_index(self, **kwargs):
         if self._auth_check():
-            return request.redirect('/smartpolling/app')
-        return request.redirect('/smartpolling/login')
+            return request.redirect('/mobile/app')
+        return request.redirect('/mobile/login')
 
-    @http.route('/smartpolling/login', type='http', auth='public', csrf=False, website=False, methods=['GET'])
+    @http.route('/mobile/login', type='http', auth='public', csrf=False, website=False, methods=['GET'])
     def sm_login_get(self, error=None, redirect=None, **kwargs):
         if self._auth_check():
-            return request.redirect(redirect or '/smartpolling/app')
+            return request.redirect(redirect or '/mobile/app')
         return request.render('smartpolling.template_relawan_login', {
             'error': error,
-            'redirect': redirect or '/smartpolling/app',
+            'redirect': redirect or '/mobile/app',
         })
 
-    @http.route('/smartpolling/login', type='http', auth='public', csrf=False, website=False, methods=['POST'])
+    @http.route('/mobile/login', type='http', auth='public', csrf=False, website=False, methods=['POST'])
     def sm_login_post(self, login='', password='', redirect=None, **kwargs):
         try:
             credential = {'type': 'password', 'login': (login or '').strip(), 'password': password}
@@ -85,22 +85,22 @@ class SmartPollingMobileController(http.Controller):
                 user = request.env['res.users'].sudo().browse(uid)
                 if not user.relawan_id:
                     request.session.logout(keep_db=True)
-                    return request.redirect('/smartpolling/login?error=unauthorized')
-                return request.redirect(redirect or '/smartpolling/app')
+                    return request.redirect('/mobile/login?error=unauthorized')
+                return request.redirect(redirect or '/mobile/app')
         except Exception as e:
             _logger.warning('SmartPolling mobile login gagal untuk "%s": %s', login, e)
-        return request.redirect('/smartpolling/login?error=invalid')
+        return request.redirect('/mobile/login?error=invalid')
 
-    @http.route('/smartpolling/logout', type='http', auth='public', csrf=False, website=False)
+    @http.route('/mobile/logout', type='http', auth='public', csrf=False, website=False)
     def sm_logout(self, **kwargs):
         request.session.logout(keep_db=True)
-        return request.redirect('/smartpolling/login')
+        return request.redirect('/mobile/login')
 
-    @http.route('/smartpolling/app', type='http', auth='public', csrf=False, website=False)
+    @http.route('/mobile/app', type='http', auth='public', csrf=False, website=False)
     def sm_app(self, **kwargs):
         user = self._auth_check()
         if not user:
-            return request.redirect('/smartpolling/login?redirect=/smartpolling/app')
+            return request.redirect('/mobile/login?redirect=/mobile/app')
         relawan = user.relawan_id
         init_data = {
             'user_id': user.id,
@@ -116,7 +116,7 @@ class SmartPollingMobileController(http.Controller):
     # ─────────────────────────────────────────────────────────────
     # API: KPI + AKTIVITAS TERBARU (Beranda)
     # ─────────────────────────────────────────────────────────────
-    @http.route('/smartpolling/api/kpi', type='jsonrpc', auth='public', csrf=False)
+    @http.route('/mobile/api/kpi', type='jsonrpc', auth='public', csrf=False)
     def api_kpi(self, **kwargs):
         user = self._auth_check()
         if not user:
@@ -151,7 +151,7 @@ class SmartPollingMobileController(http.Controller):
             'recent': recent_list,
         }
 
-    @http.route('/smartpolling/api/weekly', type='jsonrpc', auth='public', csrf=False)
+    @http.route('/mobile/api/weekly', type='jsonrpc', auth='public', csrf=False)
     def api_weekly(self, **kwargs):
         user = self._auth_check()
         if not user:
@@ -177,7 +177,7 @@ class SmartPollingMobileController(http.Controller):
     # ─────────────────────────────────────────────────────────────
     # API: DPT
     # ─────────────────────────────────────────────────────────────
-    @http.route('/smartpolling/api/dpt/list', type='jsonrpc', auth='public', csrf=False)
+    @http.route('/mobile/api/dpt/list', type='jsonrpc', auth='public', csrf=False)
     def api_dpt_list(self, offset=0, limit=20, search=None, state=None, belum_survey=False, **kwargs):
         user = self._auth_check()
         if not user:
@@ -210,7 +210,7 @@ class SmartPollingMobileController(http.Controller):
             } for r in records],
         }
 
-    @http.route('/smartpolling/api/dpt/record', type='jsonrpc', auth='public', csrf=False)
+    @http.route('/mobile/api/dpt/record', type='jsonrpc', auth='public', csrf=False)
     def api_dpt_record(self, dpt_id=None, **kwargs):
         user = self._auth_check()
         if not user:
@@ -244,7 +244,7 @@ class SmartPollingMobileController(http.Controller):
             'voters': [{'tanggal': v['tanggal'], 'pilihan': v['pilihan']} for v in voters],
         }
 
-    @http.route('/smartpolling/api/dpt/tps_options', type='jsonrpc', auth='public', csrf=False)
+    @http.route('/mobile/api/dpt/tps_options', type='jsonrpc', auth='public', csrf=False)
     def api_dpt_tps_options(self, **kwargs):
         user = self._auth_check()
         if not user:
@@ -271,7 +271,7 @@ class SmartPollingMobileController(http.Controller):
             return 'TPS wajib dipilih.'
         return None
 
-    @http.route('/smartpolling/api/dpt/create', type='jsonrpc', auth='public', csrf=False)
+    @http.route('/mobile/api/dpt/create', type='jsonrpc', auth='public', csrf=False)
     def api_dpt_create(self, data=None, **kwargs):
         user = self._auth_check()
         if not user:
@@ -323,7 +323,7 @@ class SmartPollingMobileController(http.Controller):
 
         return {'success': True, 'id': rec.id}
 
-    @http.route('/smartpolling/api/dpt/set_state', type='jsonrpc', auth='public', csrf=False)
+    @http.route('/mobile/api/dpt/set_state', type='jsonrpc', auth='public', csrf=False)
     def api_dpt_set_state(self, dpt_id=None, state=None, **kwargs):
         user = self._auth_check()
         if not user:
@@ -341,7 +341,7 @@ class SmartPollingMobileController(http.Controller):
     # ─────────────────────────────────────────────────────────────
     # API: SURVEY (Voter)
     # ─────────────────────────────────────────────────────────────
-    @http.route('/smartpolling/api/survey/list', type='jsonrpc', auth='public', csrf=False)
+    @http.route('/mobile/api/survey/list', type='jsonrpc', auth='public', csrf=False)
     def api_survey_list(self, offset=0, limit=20, **kwargs):
         user = self._auth_check()
         if not user:
@@ -364,7 +364,7 @@ class SmartPollingMobileController(http.Controller):
             } for r in records],
         }
 
-    @http.route('/smartpolling/api/survey/create', type='jsonrpc', auth='public', csrf=False)
+    @http.route('/mobile/api/survey/create', type='jsonrpc', auth='public', csrf=False)
     def api_survey_create(self, dpt_id=None, pilihan=None, foto=None, **kwargs):
         user = self._auth_check()
         if not user:
@@ -387,7 +387,7 @@ class SmartPollingMobileController(http.Controller):
     # ─────────────────────────────────────────────────────────────
     # API: PROFIL
     # ─────────────────────────────────────────────────────────────
-    @http.route('/smartpolling/api/profile/update_photo', type='jsonrpc', auth='public', csrf=False)
+    @http.route('/mobile/api/profile/update_photo', type='jsonrpc', auth='public', csrf=False)
     def api_profile_update_photo(self, foto=None, **kwargs):
         user = self._auth_check()
         if not user:

@@ -30,11 +30,11 @@
                 <form string="DPT">
                     <header>
                         <button name="action_set_terverifikasi" string="Verifikasi" type="object"
-                            class="btn-primary" invisible="state == 'terverifikasi'"/>
+                            class="btn-primary" invisible="state == 'terverifikasi'" groups="smartpolling.group_admin"/>
                         <button name="action_set_ditolak" string="Tolak" type="object"
-                            class="btn-danger" invisible="state == 'ditolak'"/>
+                            class="btn-danger" invisible="state == 'ditolak'" groups="smartpolling.group_admin"/>
                         <button name="action_set_baru" string="Kembalikan ke Baru" type="object"
-                            class="btn-secondary" invisible="state == 'baru'"/>
+                            class="btn-secondary" invisible="state == 'baru'" groups="smartpolling.group_admin"/>
                         <field name="state" widget="statusbar" statusbar_visible="baru,terverifikasi,ditolak"/>
                     </header>
                     <sheet>
