@@ -106,4 +106,4 @@ smartpolling/
 
 ## Lisensi
 
-LGPL-3 — © Fendira Studio · [fendira.net](https://fendira.net)
+LGPL-3 — © CV Sel Studio
