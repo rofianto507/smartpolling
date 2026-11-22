@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="smartpolling.LatLngMapField">
+        <div class="smartpolling-latlng-field">
+            <div t-ref="latlngMapContainer" class="smartpolling-latlng-map"/>
+            <div class="smartpolling-latlng-hint">
+                <t t-if="!props.readonly">
+                    <i class="fa fa-info-circle"/> Klik peta atau geser marker untuk mengatur koordinat.
+                </t>
+                <t t-else="">
+                    <i class="fa fa-lock"/> Koordinat hanya-baca.
+                </t>
+            </div>
+        </div>
+    </t>
+</templates>

@@ -1,0 +1,25 @@
+.o_field_widget.o_field_smartpolling_latlng_map {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+}
+.smartpolling-latlng-field {
+    display: block;
+    margin-top: 8px;
+    width: 100%;
+}
+.smartpolling-latlng-map {
+    height: 380px;
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    outline: none;
+}
+.smartpolling-latlng-hint {
+    font-size: 11px;
+    color: #95a5a6;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}

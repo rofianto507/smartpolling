@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <menuitem
+            id="menu_smartpolling_root"
+            name="SmartPolling"
+            sequence="5"/>
+
+        <!-- Dashboard: semua grup smartpolling (data otomatis ter-scope via ir.rule) -->
+        <menuitem
+            id="menu_smartpolling_dashboard"
+            name="Dashboard"
+            parent="menu_smartpolling_root"
+            action="action_smartpolling_dashboard_client"
+            groups="smartpolling.group_smartpolling_user"
+            sequence="1"/>
+
+        <!-- Data Wilayah: semua grup smartpolling -->
+        <menuitem
+            id="menu_smartpolling_wilayah"
+            name="Data Wilayah"
+            parent="menu_smartpolling_root"
+            groups="smartpolling.group_smartpolling_user"
+            sequence="10"/>
+        <menuitem
+            id="menu_smartpolling_kabupaten"
+            name="Kabupaten/Kota"
+            parent="menu_smartpolling_wilayah"
+            action="action_smartpolling_kabupaten"
+            groups="smartpolling.group_smartpolling_user"
+            sequence="1"/>
+        <menuitem
+            id="menu_smartpolling_kecamatan"
+            name="Kecamatan"
+            parent="menu_smartpolling_wilayah"
+            action="action_smartpolling_kecamatan"
+            groups="smartpolling.group_smartpolling_user"
+            sequence="2"/>
+        <menuitem
+            id="menu_smartpolling_desa"
+            name="Desa/Kelurahan"
+            parent="menu_smartpolling_wilayah"
+            action="action_smartpolling_desa"
+            groups="smartpolling.group_smartpolling_user"
+            sequence="3"/>
+
+        <!-- Relawan -->
+        <menuitem
+            id="menu_smartpolling_relawan"
+            name="Relawan"
+            parent="menu_smartpolling_root"
+            action="action_smartpolling_relawan"
+            groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
+            sequence="20"/>
+
+        <!-- TPS -->
+        <menuitem
+            id="menu_smartpolling_tps"
+            name="TPS"
+            parent="menu_smartpolling_root"
+            action="action_smartpolling_tps"
+            groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
+            sequence="30"/>
+
+        <!-- DPT -->
+        <menuitem
+            id="menu_smartpolling_dpt"
+            name="DPT"
+            parent="menu_smartpolling_root"
+            action="action_smartpolling_dpt"
+            groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
+            sequence="40"/>
+
+        <!-- Voter / Hasil Survey -->
+        <menuitem
+            id="menu_smartpolling_voter"
+            name="Hasil Survey"
+            parent="menu_smartpolling_root"
+            action="action_smartpolling_voter"
+            groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
+            sequence="50"/>
+    </data>
+</odoo>

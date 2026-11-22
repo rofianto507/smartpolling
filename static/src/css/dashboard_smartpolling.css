@@ -1,0 +1,316 @@
+/* ── Layout ── */
+.smartpolling-dashboard {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow-y: auto;
+    background: #f0f2f5;
+    font-family: inherit;
+    padding: 12px 16px 24px;
+    box-sizing: border-box;
+}
+
+.smartpolling-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #566573;
+    margin: 18px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* ── KPI cards ── */
+.smartpolling-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    flex-shrink: 0;
+}
+.smartpolling-kpi-row[data-cols="1"] { grid-template-columns: repeat(1, 1fr); }
+.smartpolling-kpi-row[data-cols="2"] { grid-template-columns: repeat(2, 1fr); }
+.smartpolling-kpi-row[data-cols="3"] { grid-template-columns: repeat(3, 1fr); }
+.smartpolling-kpi-row[data-cols="5"] { grid-template-columns: repeat(5, 1fr); }
+
+.smartpolling-kpi-card {
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: box-shadow 0.2s;
+}
+.smartpolling-kpi-card--clickable { cursor: pointer; }
+.smartpolling-kpi-card--clickable:hover {
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15), 0 6px 18px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+    transition: box-shadow 0.2s, transform 0.15s;
+}
+.smartpolling-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0eff5;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.smartpolling-kpi-body { flex: 1; min-width: 0; }
+.smartpolling-kpi-value { font-size: 24px; font-weight: 700; color: #2c3e50; line-height: 1.1; }
+.smartpolling-kpi-label {
+    font-size: 11px;
+    color: #95a5a6;
+    margin-top: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 1100px) {
+    .smartpolling-kpi-row,
+    .smartpolling-kpi-row[data-cols="4"],
+    .smartpolling-kpi-row[data-cols="5"] { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 700px) {
+    .smartpolling-kpi-row { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* ── Map ── */
+.smartpolling-map-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    min-height: 500px;
+    height: 560px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-top: 4px;
+}
+.smartpolling-map-container {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    outline: none;
+}
+
+.smartpolling-map-expand-btn a {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #333;
+    text-decoration: none;
+}
+.smartpolling-map-expand-btn a:hover {
+    background-color: #f4f4f4;
+    color: #000;
+}
+.smartpolling-map-wrapper--expanded { height: 780px; }
+
+/* ── Legend (box overlay, pojok kanan-bawah peta) ── */
+.smartpolling-legend {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 200px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    font-size: 11px;
+    color: #566573;
+    pointer-events: none;
+}
+.smartpolling-legend-group { display: flex; flex-direction: column; gap: 3px; }
+.smartpolling-legend-density { display: flex; flex-direction: column; gap: 3px; }
+.smartpolling-legend-label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 2px;
+    font-size: 11px;
+}
+.smartpolling-legend-swatch {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.smartpolling-legend-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.smartpolling-legend-dot--round { border-radius: 50%; }
+
+@media (max-width: 700px) {
+    .smartpolling-legend { display: none; }
+}
+
+/* ── Wilayah label ── */
+.smartpolling-wilayah-label {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+.smartpolling-wilayah-label span {
+    font-size: 11px;
+    font-weight: 600;
+    color: #05305e;
+    text-align: center;
+    white-space: normal;
+    max-width: 100px;
+    line-height: 1.3;
+    display: inline-block;
+}
+
+/* ── Popup ── */
+.smartpolling-leaflet-popup .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+.smartpolling-leaflet-popup .leaflet-popup-content { margin: 0; min-width: 220px; }
+.smartpolling-popup-header {
+    background: #34495e;
+    color: #ffffff;
+    padding: 10px 14px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.smartpolling-popup-header--kecamatan { background: #1a6b9a; }
+.smartpolling-popup-header i { color: #f1c40f; font-size: 14px; }
+.smartpolling-popup-body { padding: 10px 14px; background: #ffffff; }
+.smartpolling-popup-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.smartpolling-popup-body table tr { border-bottom: 1px solid #f0f0f0; }
+.smartpolling-popup-body table tr:last-child { border-bottom: none; }
+.smartpolling-popup-body table td { padding: 6px 4px; color: #444; vertical-align: middle; }
+.smartpolling-popup-body table td:first-child {
+    color: #888;
+    white-space: nowrap;
+    padding-right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.smartpolling-popup-body table td:last-child { word-break: break-all; }
+.smartpolling-popup-body table td i { color: #3498db; width: 14px; text-align: center; }
+.smartpolling-leaflet-popup .leaflet-popup-tip { background: #34495e; }
+.smartpolling-popup-footer {
+    padding: 8px 14px 12px;
+    background: #f8f9fa;
+    border-top: 1px solid #eee;
+}
+.smartpolling-btn-detail {
+    width: 100%;
+    padding: 7px 10px;
+    background: #34495e;
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.smartpolling-btn-detail:hover { background: #2c3e50; }
+
+/* ── Back button ── */
+.smartpolling-btn-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #ffffff;
+    color: #34495e;
+    border: 1.5px solid #bbb;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.smartpolling-btn-back:hover {
+    background: #34495e;
+    color: #ffffff;
+    border-color: #34495e;
+}
+
+/* ── DPT point marker ── */
+.smartpolling-dpt-marker {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 3px solid #3498db;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+}
+.smartpolling-dpt-marker i { font-size: 9px; }
+
+/* ── Cluster marker ── */
+.smartpolling-cluster-icon {
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    font-weight: 700;
+    cursor: pointer;
+    color: #ffffff;
+    background: radial-gradient(circle at 38% 35%, #5dade2, #1b4f72);
+    border: 3px solid rgba(255,255,255,0.6);
+    box-shadow: 0 2px 8px rgba(27,79,114,0.5), 0 0 0 4px rgba(27,79,114,0.15);
+}
+.smartpolling-cluster-icon:hover { transform: scale(1.12); }
+
+/* ── Chart cards ── */
+.smartpolling-chart-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 8px;
+}
+.smartpolling-chart-card {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    padding: 14px 16px 8px;
+    box-sizing: border-box;
+    min-width: 0;
+}
+.smartpolling-chart-card--pilihan {
+    flex: 0 0 25%;
+}
+.smartpolling-chart-card--petugas {
+    flex: 1 1 0;
+}
+@media (max-width: 900px) {
+    .smartpolling-chart-card--pilihan,
+    .smartpolling-chart-card--petugas {
+        flex: 1 1 100%;
+    }
+}
+.smartpolling-chart-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 4px;
+}
+.smartpolling-chart-container {
+    width: 100%;
+    height: 320px;
+}

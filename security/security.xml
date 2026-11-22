@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+    <!-- ═══════════════════════════════════════════════════════
+         MODULE CATEGORY
+    ═══════════════════════════════════════════════════════ -->
+    <record id="module_category_smartpolling" model="ir.module.category">
+        <field name="name">SmartPolling</field>
+        <field name="sequence">51</field>
+    </record>
+
+    <record id="privilege_smartpolling_access" model="res.groups.privilege">
+        <field name="name">SmartPolling</field>
+        <field name="category_id" ref="module_category_smartpolling"/>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════════════
+         GROUPS
+         Hierarki:
+           group_smartpolling_user  ← base teknikal (implied oleh semua grup)
+           group_admin   → implies group_smartpolling_user
+           group_relawan → implies group_smartpolling_user
+           group_viewer  → implies group_smartpolling_user
+    ═══════════════════════════════════════════════════════ -->
+
+    <record id="group_smartpolling_user" model="res.groups">
+        <field name="name">Pengguna SmartPolling</field>
+    </record>
+
+    <record id="group_admin" model="res.groups">
+        <field name="name">Administrator</field>
+        <field name="privilege_id" ref="privilege_smartpolling_access"/>
+        <field name="implied_ids" eval="[(4, ref('smartpolling.group_smartpolling_user'))]"/>
+    </record>
+
+    <record id="group_relawan" model="res.groups">
+        <field name="name">Relawan</field>
+        <field name="privilege_id" ref="privilege_smartpolling_access"/>
+        <field name="implied_ids" eval="[(4, ref('smartpolling.group_smartpolling_user'))]"/>
+    </record>
+
+    <!-- Dashboard Viewer: hanya baca semua data. -->
+    <record id="group_viewer" model="res.groups">
+        <field name="name">Dashboard Viewer</field>
+        <field name="privilege_id" ref="privilege_smartpolling_access"/>
+        <field name="implied_ids" eval="[(4, ref('smartpolling.group_smartpolling_user'))]"/>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════════════
+         RECORD RULES
+         Admin tidak butuh record rule (akses global via ir.model.access).
+         Relawan difilter via domain user.relawan_id.id.
+    ═══════════════════════════════════════════════════════ -->
+
+    <!-- ─── Relawan ─────────────────────────────────────────── -->
+    <record id="rule_relawan_self" model="ir.rule">
+        <field name="name">Relawan: hanya profil sendiri</field>
+        <field name="model_id" ref="model_smartpolling_relawan"/>
+        <field name="domain_force">[('id', '=', user.relawan_id.id)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_relawan'))]"/>
+        <field name="perm_read"   eval="True"/>
+        <field name="perm_write"  eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- ─── TPS ─────────────────────────────────────────────── -->
+    <record id="rule_tps_relawan" model="ir.rule">
+        <field name="name">TPS: hanya TPS yang dikoordinasi</field>
+        <field name="model_id" ref="model_smartpolling_tps"/>
+        <field name="domain_force">[('relawan_id', '=', user.relawan_id.id)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_relawan'))]"/>
+        <field name="perm_read"   eval="True"/>
+        <field name="perm_write"  eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- ─── DPT ─────────────────────────────────────────────── -->
+    <record id="rule_dpt_relawan" model="ir.rule">
+        <field name="name">DPT: data yang didata atau di TPS yang dikoordinasi</field>
+        <field name="model_id" ref="model_smartpolling_dpt"/>
+        <field name="domain_force">['|', ('petugas_id', '=', user.relawan_id.id), ('tps_id.relawan_id', '=', user.relawan_id.id)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_relawan'))]"/>
+        <field name="perm_read"   eval="True"/>
+        <field name="perm_write"  eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <!-- ─── Voter ───────────────────────────────────────────── -->
+    <record id="rule_voter_relawan" model="ir.rule">
+        <field name="name">Voter: survey milik DPT yang dapat diakses relawan</field>
+        <field name="model_id" ref="model_smartpolling_voter"/>
+        <field name="domain_force">['|', ('dpt_id.petugas_id', '=', user.relawan_id.id), ('dpt_id.tps_id.relawan_id', '=', user.relawan_id.id)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_relawan'))]"/>
+        <field name="perm_read"   eval="True"/>
+        <field name="perm_write"  eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_smartpolling_tps_list" model="ir.ui.view">
+            <field name="name">tps.list.smartpolling</field>
+            <field name="model">smartpolling.tps</field>
+            <field name="arch" type="xml">
+                <list string="TPS" decoration-danger="not relawan_id">
+                    <field name="code"/>
+                    <field name="name"/>
+                    <field name="desa_id"/>
+                    <field name="kecamatan_id"/>
+                    <field name="kabupaten_id"/>
+                    <field name="relawan_id"/>
+                    <field name="total_dpt"/>
+                    <field name="total_target"/>
+                    <field name="state" widget="badge"
+                        decoration-success="state == 'aktif'"
+                        decoration-danger="state == 'non_aktif'"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_tps_form" model="ir.ui.view">
+            <field name="name">tps.form.smartpolling</field>
+            <field name="model">smartpolling.tps</field>
+            <field name="arch" type="xml">
+                <form string="TPS">
+                    <header>
+                        <button name="action_set_non_aktif" string="Non Aktifkan" type="object"
+                            class="btn-danger" invisible="state == 'non_aktif'"/>
+                        <button name="action_set_aktif" string="Aktifkan Kembali" type="object"
+                            class="btn-secondary" invisible="state == 'aktif'"/>
+                        <field name="state" widget="statusbar" statusbar_visible="aktif,non_aktif"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_dpt" type="object" class="oe_stat_button" icon="fa-users">
+                                <field name="total_dpt" widget="statinfo" string="DPT"/>
+                            </button>
+                        </div>
+                        <div class="oe_title">
+                            <h1><field name="code" readonly="1"/></h1>
+                            <field name="name" placeholder="Nama TPS"/>
+                        </div>
+                        <group>
+                            <group string="Wilayah">
+                                <field name="kabupaten_id" invisible="1"/>
+                                <field name="desa_id"/>
+                                <field name="kecamatan_id" readonly="1"/>
+                            </group>
+                            <group string="Koordinator">
+                                <field name="relawan_id"/>
+                            </group>
+                        </group>
+                        <group string="Target vs Realisasi">
+                            <group>
+                                <field name="total_target"/>
+                            </group>
+                            <group>
+                                <field name="total_dpt" readonly="1"/>
+                            </group>
+                        </group>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_tps_pivot" model="ir.ui.view">
+            <field name="name">tps.pivot.smartpolling</field>
+            <field name="model">smartpolling.tps</field>
+            <field name="arch" type="xml">
+                <pivot string="TPS">
+                    <field name="kabupaten_id" type="row"/>
+                    <field name="kecamatan_id" type="row"/>
+                    <field name="state" type="col"/>
+                    <field name="total_target" type="measure"/>
+                    <field name="total_dpt" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_tps_graph" model="ir.ui.view">
+            <field name="name">tps.graph.smartpolling</field>
+            <field name="model">smartpolling.tps</field>
+            <field name="arch" type="xml">
+                <graph string="TPS" type="bar">
+                    <field name="kabupaten_id" type="row"/>
+                    <field name="total_target" type="measure"/>
+                    <field name="total_dpt" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_tps_search" model="ir.ui.view">
+            <field name="name">tps.search.smartpolling</field>
+            <field name="model">smartpolling.tps</field>
+            <field name="arch" type="xml">
+                <search string="Cari TPS">
+                    <field name="code"/>
+                    <field name="name"/>
+                    <field name="desa_id"/>
+                    <field name="kecamatan_id"/>
+                    <field name="kabupaten_id"/>
+                    <field name="relawan_id"/>
+                    <separator/>
+                    <filter string="Aktif" name="filter_aktif" domain="[('state', '=', 'aktif')]"/>
+                    <filter string="Non Aktif" name="filter_non_aktif" domain="[('state', '=', 'non_aktif')]"/>
+                    <separator/>
+                    <filter string="Belum Ada Koordinator" name="filter_tanpa_relawan" domain="[('relawan_id', '=', False)]"/>
+                    <group>
+                        <filter string="Kabupaten/Kota" name="groupby_kabupaten" context="{'group_by': 'kabupaten_id'}"/>
+                        <filter string="Kecamatan" name="groupby_kecamatan" context="{'group_by': 'kecamatan_id'}"/>
+                        <filter string="Koordinator" name="groupby_relawan" context="{'group_by': 'relawan_id'}"/>
+                        <filter string="Status" name="groupby_state" context="{'group_by': 'state'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_smartpolling_tps" model="ir.actions.act_window">
+            <field name="name">TPS</field>
+            <field name="res_model">smartpolling.tps</field>
+            <field name="view_mode">list,pivot,graph,form</field>
+            <field name="search_view_id" ref="view_smartpolling_tps_search"/>
+        </record>
+    </data>
+</odoo>

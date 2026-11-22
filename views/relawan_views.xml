@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_smartpolling_relawan_list" model="ir.ui.view">
+            <field name="name">relawan.list.smartpolling</field>
+            <field name="model">smartpolling.relawan</field>
+            <field name="arch" type="xml">
+                <list string="Relawan">
+                    <field name="name"/>
+                    <field name="hp"/>
+                    <field name="tps_count" string="Total TPS"/>
+                    <field name="dpt_count" string="Total DPT"/>
+                    <field name="voter_count" string="Total Survey"/>
+                    <field name="has_user" string="Ada Username"/>
+                    <field name="state" widget="badge"
+                        decoration-success="state == 'aktif'"
+                        decoration-danger="state == 'non_aktif'"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_relawan_form" model="ir.ui.view">
+            <field name="name">relawan.form.smartpolling</field>
+            <field name="model">smartpolling.relawan</field>
+            <field name="arch" type="xml">
+                <form string="Relawan">
+                    <header>
+                        <button name="action_open_create_user_wizard" string="Buat User" type="object"
+                            class="btn-secondary" invisible="user_ids" groups="smartpolling.group_admin"/>
+                        <button name="action_set_non_aktif" string="Non Aktifkan" type="object"
+                            class="btn-danger" invisible="state == 'non_aktif'"/>
+                        <button name="action_set_aktif" string="Aktifkan Kembali" type="object"
+                            class="btn-secondary" invisible="state == 'aktif'"/>
+                        <field name="state" widget="statusbar" statusbar_visible="aktif,non_aktif"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_tps" type="object" class="oe_stat_button" icon="fa-building">
+                                <field name="tps_count" widget="statinfo" string="TPS"/>
+                            </button>
+                            <button name="action_view_dpt" type="object" class="oe_stat_button" icon="fa-users">
+                                <field name="dpt_count" widget="statinfo" string="DPT"/>
+                            </button>
+                            <button name="action_view_voter" type="object" class="oe_stat_button" icon="fa-comments">
+                                <field name="voter_count" widget="statinfo" string="Survey"/>
+                            </button>
+                            <button name="action_view_user" type="object" class="oe_stat_button" icon="fa-user-circle" invisible="not user_ids">
+                                <field name="linked_username" widget="statinfo" string="Username"/>
+                            </button>
+                        </div>
+                        <field name="foto" widget="image" class="oe_avatar"/>
+                        <div class="oe_title">
+                            <h1><field name="name" placeholder="Nama Relawan"/></h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="hp"/>
+                            </group>
+                            <group>
+                                <field name="alamat"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Data TPS" name="page_tps">
+                                <field name="tps_ids">
+                                    <list>
+                                        <field name="code"/>
+                                        <field name="name"/>
+                                        <field name="desa_id"/>
+                                        <field name="kecamatan_id"/>
+                                        <field name="total_target"/>
+                                        <field name="total_dpt"/>
+                                        <field name="state" widget="badge"
+                                            decoration-success="state == 'aktif'"
+                                            decoration-danger="state == 'non_aktif'"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Data DPT" name="page_dpt">
+                                <field name="dpt_ids">
+                                    <list>
+                                        <field name="nik"/>
+                                        <field name="nama"/>
+                                        <field name="jenis_kelamin"/>
+                                        <field name="tps_id"/>
+                                        <field name="pilihan_terakhir" optional="show"/>
+                                        <field name="state" widget="badge"
+                                            decoration-success="state == 'terverifikasi'"
+                                            decoration-info="state == 'baru'"
+                                            decoration-danger="state == 'ditolak'"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Data Survey" name="page_survey">
+                                <field name="voter_ids">
+                                    <list>
+                                        <field name="tanggal"/>
+                                        <field name="dpt_id"/>
+                                        <field name="nik"/>
+                                        <field name="tps_id"/>
+                                        <field name="pilihan" widget="badge"
+                                            decoration-success="pilihan == 'memilih'"
+                                            decoration-warning="pilihan == 'ragu_ragu'"
+                                            decoration-info="pilihan == 'belum_menentukan'"
+                                            decoration-danger="pilihan == 'tidak_memilih'"/>
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_relawan_kanban" model="ir.ui.view">
+            <field name="name">relawan.kanban.smartpolling</field>
+            <field name="model">smartpolling.relawan</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_mobile">
+                    <field name="tps_count"/>
+                    <field name="dpt_count"/>
+                    <field name="voter_count"/>
+                    <templates>
+                        <t t-name="card" class="flex-row">
+                            <aside class="o_kanban_aside_full">
+                                <field name="foto" class="o_kanban_image_fill w-100" widget="image"
+                                    options="{'img_class': 'object-fit-cover'}" alt="Foto Relawan"/>
+                            </aside>
+                            <main class="ps-2 ps-md-0">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <field name="name" class="fw-bold"/>
+                                    <field name="state" widget="badge"
+                                        decoration-success="state == 'aktif'"
+                                        decoration-danger="state == 'non_aktif'"/>
+                                </div>
+                                <div t-if="record.hp.raw_value">
+                                    <i class="fa fa-fw me-1 fa-phone text-primary"/>
+                                    <field name="hp"/>
+                                </div>
+                                <div class="d-flex gap-3 text-muted mt-1">
+                                    <span><i class="fa fa-building me-1"/><field name="tps_count"/> TPS</span>
+                                    <span><i class="fa fa-users me-1"/><field name="dpt_count"/> DPT</span>
+                                    <span><i class="fa fa-comments me-1"/><field name="voter_count"/> Survey</span>
+                                </div>
+                            </main>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_relawan_pivot" model="ir.ui.view">
+            <field name="name">relawan.pivot.smartpolling</field>
+            <field name="model">smartpolling.relawan</field>
+            <field name="arch" type="xml">
+                <pivot string="Relawan">
+                    <field name="name" type="row"/>
+                    <field name="tps_count" type="measure"/>
+                    <field name="dpt_count" type="measure"/>
+                    <field name="voter_count" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_relawan_graph" model="ir.ui.view">
+            <field name="name">relawan.graph.smartpolling</field>
+            <field name="model">smartpolling.relawan</field>
+            <field name="arch" type="xml">
+                <graph string="Relawan" type="bar">
+                    <field name="name" type="row"/>
+                    <field name="dpt_count" type="measure"/>
+                    <field name="voter_count" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_relawan_search" model="ir.ui.view">
+            <field name="name">relawan.search.smartpolling</field>
+            <field name="model">smartpolling.relawan</field>
+            <field name="arch" type="xml">
+                <search string="Cari Relawan">
+                    <field name="name"/>
+                    <field name="hp"/>
+                    <separator/>
+                    <filter string="Aktif" name="filter_aktif" domain="[('state', '=', 'aktif')]"/>
+                    <filter string="Non Aktif" name="filter_non_aktif" domain="[('state', '=', 'non_aktif')]"/>
+                    <separator/>
+                    <filter string="Ada Username" name="filter_ada_username" domain="[('has_user', '=', True)]"/>
+                    <filter string="Belum Ada Username" name="filter_belum_username" domain="[('has_user', '=', False)]"/>
+                    <group>
+                        <filter string="Status" name="groupby_state" context="{'group_by': 'state'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_smartpolling_relawan" model="ir.actions.act_window">
+            <field name="name">Relawan</field>
+            <field name="res_model">smartpolling.relawan</field>
+            <field name="view_mode">list,kanban,pivot,graph,form</field>
+            <field name="search_view_id" ref="view_smartpolling_relawan_search"/>
+        </record>
+    </data>
+</odoo>

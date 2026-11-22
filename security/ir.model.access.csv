@@ -1,0 +1,20 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_kabupaten_admin,kabupaten admin,model_smartpolling_kabupaten,smartpolling.group_admin,1,1,1,1
+access_kabupaten_user,kabupaten user,model_smartpolling_kabupaten,smartpolling.group_smartpolling_user,1,0,0,0
+access_kecamatan_admin,kecamatan admin,model_smartpolling_kecamatan,smartpolling.group_admin,1,1,1,1
+access_kecamatan_user,kecamatan user,model_smartpolling_kecamatan,smartpolling.group_smartpolling_user,1,0,0,0
+access_desa_admin,desa admin,model_smartpolling_desa,smartpolling.group_admin,1,1,1,1
+access_desa_user,desa user,model_smartpolling_desa,smartpolling.group_smartpolling_user,1,0,0,0
+access_relawan_admin,relawan admin,model_smartpolling_relawan,smartpolling.group_admin,1,1,1,1
+access_relawan_relawan,relawan self,model_smartpolling_relawan,smartpolling.group_relawan,1,1,0,0
+access_relawan_viewer,relawan viewer,model_smartpolling_relawan,smartpolling.group_viewer,1,0,0,0
+access_tps_admin,tps admin,model_smartpolling_tps,smartpolling.group_admin,1,1,1,1
+access_tps_relawan,tps relawan read,model_smartpolling_tps,smartpolling.group_relawan,1,0,0,0
+access_tps_viewer,tps viewer,model_smartpolling_tps,smartpolling.group_viewer,1,0,0,0
+access_dpt_admin,dpt admin,model_smartpolling_dpt,smartpolling.group_admin,1,1,1,1
+access_dpt_relawan,dpt relawan,model_smartpolling_dpt,smartpolling.group_relawan,1,1,1,1
+access_dpt_viewer,dpt viewer,model_smartpolling_dpt,smartpolling.group_viewer,1,0,0,0
+access_voter_admin,voter admin,model_smartpolling_voter,smartpolling.group_admin,1,1,1,1
+access_voter_relawan,voter relawan,model_smartpolling_voter,smartpolling.group_relawan,1,1,1,1
+access_voter_viewer,voter viewer,model_smartpolling_voter,smartpolling.group_viewer,1,0,0,0
+access_relawan_create_user_wizard_admin,relawan create user wizard admin,model_smartpolling_relawan_create_user_wizard,smartpolling.group_admin,1,1,1,1

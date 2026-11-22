@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         LOGIN PAGE — SmartPolling Mobile
+         URL: /smartpolling/login
+         ════════════════════════════════════════════════════════ -->
+    <template id="template_relawan_login" name="SmartPolling – Login">
+        <html lang="id">
+            <head>
+                <meta charset="UTF-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+                <meta name="theme-color" content="#714B67"/>
+                <meta name="mobile-web-app-capable" content="yes"/>
+                <meta name="apple-mobile-web-app-capable" content="yes"/>
+                <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+                <title>SmartPolling – Relawan</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+                <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;display=swap"/>
+                <link rel="stylesheet" href="/smartpolling/static/lib/fontawesome/css/font-awesome.css"/>
+                <link rel="stylesheet" type="text/css" t-attf-href="/smartpolling/static/src/css/mobile_app.css?v=20260804a"/>
+            </head>
+            <body>
+
+                <div class="sm-login-root">
+
+                    <div class="sm-login-header">
+                        <div class="sm-login-logo">
+                            <i class="fa fa-check-square-o"/>
+                        </div>
+                        <div class="sm-login-app-name">SmartPolling</div>
+                        <div class="sm-login-app-sub">Aplikasi Relawan Lapangan</div>
+                    </div>
+
+                    <div class="sm-login-body">
+
+                        <div class="sm-login-card">
+                            <div class="sm-login-card-heading">Selamat Datang</div>
+                            <div class="sm-login-card-sub">Masuk dengan akun relawan yang telah diberikan</div>
+
+                            <t t-if="error == 'invalid'">
+                                <div class="sm-alert sm-alert--error">
+                                    <i class="fa fa-exclamation-circle sm-alert-icon"/>
+                                    <span>Username atau password tidak sesuai. Periksa kembali dan coba lagi.</span>
+                                </div>
+                            </t>
+                            <t t-if="error == 'unauthorized'">
+                                <div class="sm-alert sm-alert--warning">
+                                    <i class="fa fa-ban sm-alert-icon"/>
+                                    <span>Akun ini belum terhubung ke profil Relawan. Hubungi administrator.</span>
+                                </div>
+                            </t>
+
+                            <form id="sm-login-form" method="POST" action="/smartpolling/login" autocomplete="on">
+                                <input type="hidden" name="redirect" t-att-value="redirect"/>
+
+                                <div class="sm-field">
+                                    <label class="sm-label" for="login">Username</label>
+                                    <div class="sm-input-wrap">
+                                        <i class="fa fa-user sm-input-icon"/>
+                                        <input
+                                            id="login"
+                                            name="login"
+                                            type="text"
+                                            class="sm-input"
+                                            placeholder="Masukkan username atau No. HP"
+                                            autocomplete="username"
+                                            autofocus="autofocus"
+                                            required="required"/>
+                                    </div>
+                                </div>
+
+                                <div class="sm-field">
+                                    <label class="sm-label" for="password">Password</label>
+                                    <div class="sm-input-wrap">
+                                        <i class="fa fa-lock sm-input-icon"/>
+                                        <input
+                                            id="password"
+                                            name="password"
+                                            type="password"
+                                            class="sm-input sm-input-pass"
+                                            placeholder="Masukkan password"
+                                            autocomplete="current-password"
+                                            required="required"/>
+                                        <button type="button" class="sm-pass-toggle" id="sm-pass-toggle" title="Tampilkan password">
+                                            <i class="fa fa-eye" id="sm-pass-icon"/>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="sm-btn-primary" id="sm-login-btn">
+                                    <i class="fa fa-sign-in"/>
+                                    <span id="sm-login-label">Masuk</span>
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="sm-login-foot-note">
+                            <i class="fa fa-shield"/>
+                            Akses terbatas — khusus relawan yang terdaftar
+                        </div>
+
+                    </div>
+                </div>
+
+                <script>
+                (function () {
+                    var toggleBtn = document.getElementById('sm-pass-toggle');
+                    var passInput = document.getElementById('password');
+                    var passIcon  = document.getElementById('sm-pass-icon');
+                    if (toggleBtn) {
+                        toggleBtn.addEventListener('click', function () {
+                            var isPass = passInput.type === 'password';
+                            passInput.type     = isPass ? 'text' : 'password';
+                            passIcon.className = isPass ? 'fa fa-eye-slash' : 'fa fa-eye';
+                        });
+                    }
+
+                    var form     = document.getElementById('sm-login-form');
+                    var loginBtn = document.getElementById('sm-login-btn');
+                    var loginLbl = document.getElementById('sm-login-label');
+                    if (form) {
+                        form.addEventListener('submit', function () {
+                            loginBtn.disabled  = true;
+                            loginBtn.innerHTML = '<span class="sm-spinner"></span><span>Memeriksa...</span>';
+                        });
+                    }
+
+                    var params = new URLSearchParams(window.location.search);
+                    if (params.get('error')) {
+                        var loginField = document.getElementById('login');
+                        if (loginField) loginField.focus();
+                    }
+                })();
+                </script>
+
+            </body>
+        </html>
+    </template>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         APP SHELL — SmartPolling Mobile (OWL)
+         URL: /smartpolling/app
+         ════════════════════════════════════════════════════════ -->
+    <template id="template_relawan_app" name="SmartPolling – Mobile App">
+        <html lang="id">
+            <head>
+                <meta charset="UTF-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+                <meta name="theme-color" content="#714B67"/>
+                <meta name="mobile-web-app-capable" content="yes"/>
+                <meta name="apple-mobile-web-app-capable" content="yes"/>
+                <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+                <meta name="apple-mobile-web-app-title" content="SmartPolling"/>
+                <title>SmartPolling Mobile</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;display=swap"/>
+                <link rel="stylesheet" href="/smartpolling/static/lib/fontawesome/css/font-awesome.css"/>
+                <link rel="stylesheet" type="text/css" href="/smartpolling/static/lib/leaflet/leaflet.css"/>
+                <link rel="stylesheet" type="text/css" t-attf-href="/smartpolling/static/src/css/mobile_app.css?v=20260804a"/>
+            </head>
+            <body>
+
+                <div id="sm-app-root" t-att-data-init="init_data"></div>
+
+                <script type="text/javascript" src="/smartpolling/static/lib/leaflet/leaflet.js"/>
+                <script type="text/javascript" src="/smartpolling/static/lib/echart/echarts.min.js"/>
+                <script type="text/javascript" src="/web/static/lib/owl/owl.js"/>
+                <script type="text/javascript" t-attf-src="/smartpolling/static/src/js/mobile_app.js?v=20260804a"/>
+
+            </body>
+        </html>
+    </template>
+
+</odoo>

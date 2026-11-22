@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.claude/
+.vscode/
+*.log
+SMARTPOLLING_PROJECT_CONTEXT.md

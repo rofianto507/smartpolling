@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="smartpolling.Dashboard">
+        <div class="smartpolling-dashboard">
+            <div class="smartpolling-section-title">Ringkasan</div>
+            <div class="smartpolling-kpi-row" t-ref="kpiRowUtama"/>
+
+            <div class="smartpolling-section-title">Sebaran DPT</div>
+            <div class="smartpolling-map-wrapper" t-ref="mapWrapper">
+                <div t-ref="mapContainer" class="smartpolling-map-container" tabindex="-1"/>
+                <div class="smartpolling-legend">
+                    <div class="smartpolling-legend-group">
+                        <span class="smartpolling-legend-label">Kepadatan DPT per Wilayah</span>
+                        <div class="smartpolling-legend-density" t-ref="legendDensity"/>
+                    </div>
+                    <div class="smartpolling-legend-group">
+                        <span class="smartpolling-legend-label">Status DPT</span>
+                        <span class="smartpolling-legend-swatch"><span class="smartpolling-legend-dot smartpolling-legend-dot--round" style="background:#3498DB;"/> Baru</span>
+                        <span class="smartpolling-legend-swatch"><span class="smartpolling-legend-dot smartpolling-legend-dot--round" style="background:#27AE60;"/> Terverifikasi</span>
+                        <span class="smartpolling-legend-swatch"><span class="smartpolling-legend-dot smartpolling-legend-dot--round" style="background:#E74C3C;"/> Ditolak</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="smartpolling-section-title">Statistik Survey</div>
+            <div class="smartpolling-chart-row">
+                <div class="smartpolling-chart-card smartpolling-chart-card--pilihan">
+                    <div class="smartpolling-chart-card-title">Distribusi Pilihan Voter</div>
+                    <div t-ref="chartPilihan" class="smartpolling-chart-container"/>
+                </div>
+                <div class="smartpolling-chart-card smartpolling-chart-card--petugas">
+                    <div class="smartpolling-chart-card-title">Total Survey per Petugas</div>
+                    <div t-ref="chartPetugas" class="smartpolling-chart-container"/>
+                </div>
+            </div>
+
+            <div class="smartpolling-section-title">Tren Aktivitas Survey</div>
+            <div class="smartpolling-chart-card">
+                <div class="smartpolling-chart-card-title">Survey 1 Bulan Terakhir</div>
+                <div t-ref="chartWeekly" class="smartpolling-chart-container"/>
+            </div>
+        </div>
+    </t>
+</templates>

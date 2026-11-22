@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_relawan_create_user_wizard_form" model="ir.ui.view">
+            <field name="name">relawan.create.user.wizard.form.smartpolling</field>
+            <field name="model">smartpolling.relawan.create.user.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Buat User dari Relawan">
+                    <group>
+                        <field name="relawan_id" invisible="1"/>
+                        <field name="username" placeholder="Otomatis dari No. HP"/>
+                        <field name="password" password="True"/>
+                        <field name="password_confirm" password="True" string="Konfirmasi Password"/>
+                    </group>
+                    <footer>
+                        <button name="action_confirm" string="Buat User" type="object" class="btn-primary"/>
+                        <button string="Batal" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+    </data>
+</odoo>
