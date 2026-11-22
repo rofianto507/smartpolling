@@ -26,7 +26,9 @@ class RelawanCreateUserWizard(models.TransientModel):
             raise ValidationError(_('Username "%s" sudah digunakan, silakan pilih username lain.') % self.username)
 
         group_relawan = self.env.ref('smartpolling.group_relawan')
-        group_internal = self.env.ref('base.group_user')
+        # Portal (bukan Internal User): petugas hanya boleh memakai app /mobile,
+        # Odoo otomatis menolak user non-internal masuk backend /odoo.
+        group_portal = self.env.ref('base.group_portal')
         self.env['res.users'].sudo().create({
             'name': self.relawan_id.name,
             'login': self.username,
@@ -34,8 +36,10 @@ class RelawanCreateUserWizard(models.TransientModel):
             'phone': self.username,
             'image_1920': self.relawan_id.foto,
             'relawan_id': self.relawan_id.id,
-            'group_ids': [Command.link(group_internal.id), Command.link(group_relawan.id)],
+            'group_ids': [Command.set([group_portal.id, group_relawan.id])],
         })
+        # Password tidak perlu disimpan lebih lama di tabel wizard.
+        self.write({'password': False, 'password_confirm': False})
         return {
             'type': 'ir.actions.act_window',
             'name': self.relawan_id.name,
