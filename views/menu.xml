@@ -110,5 +110,20 @@
             action="action_smartpolling_agenda"
             groups="smartpolling.group_admin,smartpolling.group_viewer"
             sequence="2"/>
+
+        <!-- Konfigurasi: API key AI = rahasia sistem → khusus administrator Settings Odoo -->
+        <menuitem
+            id="menu_smartpolling_konfigurasi"
+            name="Konfigurasi"
+            parent="menu_smartpolling_root"
+            groups="base.group_system"
+            sequence="90"/>
+        <menuitem
+            id="menu_smartpolling_ai_settings"
+            name="Pengaturan AI"
+            parent="menu_smartpolling_konfigurasi"
+            action="action_smartpolling_config_settings"
+            groups="base.group_system"
+            sequence="1"/>
     </data>
 </odoo>

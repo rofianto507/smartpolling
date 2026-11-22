@@ -39,6 +39,160 @@
                 <div class="smartpolling-chart-card-title">Survey 1 Bulan Terakhir</div>
                 <div t-ref="chartWeekly" class="smartpolling-chart-container"/>
             </div>
+
+            <!-- ══ EVENT ══ -->
+            <div class="smartpolling-section-title">Event Penggalangan Suara</div>
+            <div class="smartpolling-kpi-row" t-ref="kpiRowEvent"/>
+            <div class="smartpolling-chart-row smartpolling-chart-row--half">
+                <div class="smartpolling-chart-card">
+                    <div class="smartpolling-chart-card-title">Dana Disetujui vs Realisasi per Event</div>
+                    <div t-ref="chartEventDana" class="smartpolling-chart-container"/>
+                </div>
+                <div class="smartpolling-chart-card">
+                    <div class="smartpolling-chart-card-title">Target vs Realisasi Suara per Event</div>
+                    <div t-ref="chartEventSuara" class="smartpolling-chart-container"/>
+                </div>
+            </div>
+
+            <!-- ══ AGENDA & BERITA ══ -->
+            <div class="smartpolling-section-title">Agenda &amp; Berita</div>
+            <div class="smartpolling-chart-row smartpolling-chart-row--info">
+                <div class="smartpolling-chart-card">
+                    <div class="smartpolling-chart-card-title">Kegiatan &amp; Komunikasi per Bulan</div>
+                    <div t-ref="chartInfoBulanan" class="smartpolling-chart-container"/>
+                </div>
+                <div class="smartpolling-chart-card">
+                    <div class="smartpolling-chart-card-title">Agenda Mendatang</div>
+                    <t t-if="!state.agendaMendatang.length">
+                        <div class="smartpolling-empty-note">Tidak ada agenda terbit yang akan datang.</div>
+                    </t>
+                    <t t-foreach="state.agendaMendatang" t-as="a" t-key="a.id">
+                        <div class="smartpolling-agenda-row" t-on-click="() => this.openRecord('smartpolling.agenda', a.id)">
+                            <div class="smartpolling-agenda-date">
+                                <b t-esc="this.fmtDay(a.mulai)"/><span t-esc="this.fmtMon(a.mulai)"/>
+                            </div>
+                            <div class="smartpolling-agenda-body">
+                                <div class="smartpolling-agenda-name" t-esc="a.nama"/>
+                                <div class="smartpolling-agenda-meta"><i class="fa fa-clock-o"/> <t t-esc="this.fmtTime(a.mulai)"/>
+                                    <t t-if="a.lokasi"> · <i class="fa fa-map-marker"/> <t t-esc="a.lokasi"/></t></div>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+            <div class="smartpolling-chart-card">
+                <div class="smartpolling-chart-card-title">
+                    Dampak Kegiatan terhadap Aktivitas Survey
+                    <span class="smartpolling-chart-card-sub">survey per hari saat agenda/event vs rata-rata harian 90 hari terakhir</span>
+                </div>
+                <div t-ref="chartDampak" class="smartpolling-chart-container"/>
+            </div>
+
+            <!-- ══ PANEL ANALISIS AI (drawer kanan) ══ -->
+            <t t-if="state.ai.canGenerate">
+                <button class="smartpolling-ai-tab" t-on-click="toggleAiPanel" title="Analisis AI">
+                    <i class="fa fa-magic"/> <span>Analisis AI</span>
+                </button>
+                <div t-attf-class="smartpolling-ai-backdrop {{ state.ai.open ? 'smartpolling-ai-backdrop--open' : '' }}" t-on-click="toggleAiPanel"/>
+                <aside t-attf-class="smartpolling-ai-panel {{ state.ai.open ? 'smartpolling-ai-panel--open' : '' }}">
+                    <div class="smartpolling-ai-header">
+                        <div><i class="fa fa-magic"/> Analisis Dashboard AI</div>
+                        <button class="smartpolling-ai-close" t-on-click="toggleAiPanel"><i class="fa fa-times"/></button>
+                    </div>
+                    <div class="smartpolling-ai-body">
+                        <div class="smartpolling-ai-controls">
+                            <label>Cakupan
+                                <select class="form-select form-select-sm" t-model="state.ai.kabupatenId">
+                                    <option value="">Seluruh wilayah</option>
+                                    <t t-foreach="state.ai.kabupatenList" t-as="k" t-key="k.id">
+                                        <option t-att-value="k.id" t-esc="k.name"/>
+                                    </t>
+                                </select>
+                            </label>
+                            <label>Periode
+                                <select class="form-select form-select-sm" t-model="state.ai.periode">
+                                    <option value="7">7 hari terakhir</option>
+                                    <option value="30">30 hari terakhir</option>
+                                    <option value="90">90 hari terakhir</option>
+                                </select>
+                            </label>
+                            <button class="btn btn-primary w-100" t-on-click="onAnalyze" t-att-disabled="state.ai.loading or !state.ai.hasKey">
+                                <t t-if="state.ai.loading"><i class="fa fa-spinner fa-spin"/> Menganalisis… (±10–40 detik)</t>
+                                <t t-else=""><i class="fa fa-magic"/> Buat Analisis</t>
+                            </button>
+                            <div class="smartpolling-ai-privacy"><i class="fa fa-lock"/> Hanya angka agregat yang dikirim ke AI — tanpa NIK, nama pemilih, atau nama relawan.</div>
+                        </div>
+
+                        <div t-if="!state.ai.hasKey" class="alert alert-warning py-2 small">
+                            Gemini API Key belum dikonfigurasi. Administrator sistem dapat mengaturnya di
+                            <b>SmartPolling → Konfigurasi → Pengaturan AI</b>.
+                        </div>
+                        <div t-if="state.ai.error" class="alert alert-danger py-2 small" t-esc="state.ai.error"/>
+
+                        <div class="smartpolling-ai-history-title">Riwayat Analisis</div>
+                        <div t-if="!state.ai.history.length and !state.ai.loading" class="smartpolling-empty-note">Belum ada analisis.</div>
+                        <t t-foreach="state.ai.history" t-as="r" t-key="r.id">
+                            <div t-attf-class="smartpolling-ai-report {{ state.ai.expandedId === r.id ? 'smartpolling-ai-report--open' : '' }}">
+                                <div class="smartpolling-ai-report-head" t-on-click="() => this.toggleReport(r.id)">
+                                    <span t-attf-class="smartpolling-ai-status smartpolling-ai-status--{{ r.status || 'netral' }}" t-esc="this.statusLabel(r.status)"/>
+                                    <div class="smartpolling-ai-report-title">
+                                        <div t-esc="r.judul"/>
+                                        <small><t t-esc="r.cakupan"/> · <t t-esc="r.periode_hari"/> hari · <t t-esc="this.fmtDateTime(r.tanggal)"/></small>
+                                    </div>
+                                    <i t-attf-class="fa {{ state.ai.expandedId === r.id ? 'fa-chevron-up' : 'fa-chevron-down' }}"/>
+                                </div>
+                                <t t-if="state.ai.expandedId === r.id">
+                                    <t t-set="h" t-value="r.hasil"/>
+                                    <div class="smartpolling-ai-report-body">
+                                        <p class="smartpolling-ai-summary" t-esc="h.ringkasan"/>
+                                        <p t-if="h.alasan_status" class="smartpolling-ai-reason"><i class="fa fa-info-circle"/> <t t-esc="h.alasan_status"/></p>
+
+                                        <t t-if="h.temuan and h.temuan.length">
+                                            <div class="smartpolling-ai-h">Temuan Kunci</div>
+                                            <t t-foreach="h.temuan" t-as="t" t-key="t_index">
+                                                <div t-attf-class="smartpolling-ai-finding smartpolling-ai-finding--{{ t.tingkat }}">
+                                                    <b t-esc="t.judul"/>
+                                                    <div t-esc="t.detail"/>
+                                                </div>
+                                            </t>
+                                        </t>
+                                        <t t-if="h.wilayah_prioritas and h.wilayah_prioritas.length">
+                                            <div class="smartpolling-ai-h">Wilayah Prioritas</div>
+                                            <ol class="smartpolling-ai-list">
+                                                <t t-foreach="h.wilayah_prioritas" t-as="w" t-key="w_index">
+                                                    <li><b t-esc="w.wilayah"/> — <t t-esc="w.alasan"/></li>
+                                                </t>
+                                            </ol>
+                                        </t>
+                                        <t t-if="h.evaluasi_event">
+                                            <div class="smartpolling-ai-h">Evaluasi Event</div>
+                                            <p t-esc="h.evaluasi_event"/>
+                                        </t>
+                                        <t t-if="h.rekomendasi and h.rekomendasi.length">
+                                            <div class="smartpolling-ai-h">Rekomendasi</div>
+                                            <t t-foreach="h.rekomendasi" t-as="k" t-key="k_index">
+                                                <div class="smartpolling-ai-rec">
+                                                    <span t-attf-class="smartpolling-ai-prio smartpolling-ai-prio--{{ k.prioritas }}" t-esc="k.prioritas"/>
+                                                    <div><b t-esc="k.aksi"/><div class="text-muted" t-esc="k.alasan"/></div>
+                                                </div>
+                                            </t>
+                                        </t>
+                                        <p t-if="h.catatan_data" class="smartpolling-ai-note"><i class="fa fa-exclamation-circle"/> <t t-esc="h.catatan_data"/></p>
+
+                                        <div class="smartpolling-ai-actions">
+                                            <button class="btn btn-sm btn-light" t-on-click="() => this.copyReport(r)"><i class="fa fa-copy"/> Salin</button>
+                                            <button class="btn btn-sm btn-light" t-on-click="() => this.toggleData(r.id)"><i class="fa fa-database"/> Data yang dianalisis</button>
+                                            <button t-if="state.ai.canDelete" class="btn btn-sm btn-light text-danger ms-auto" t-on-click="() => this.deleteReport(r.id)"><i class="fa fa-trash"/></button>
+                                        </div>
+                                        <pre t-if="state.ai.dataOpenId === r.id" class="smartpolling-ai-data" t-esc="r.data_json"/>
+                                        <div class="smartpolling-ai-footnote">Dibuat oleh <t t-esc="r.user"/> · hasil AI dapat keliru, cek ulang angka penting.</div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                    </div>
+                </aside>
+            </t>
         </div>
     </t>
 </templates>

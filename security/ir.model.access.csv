@@ -33,3 +33,5 @@ access_event_anggaran_viewer,event anggaran viewer,model_smartpolling_event_angg
 access_event_realisasi_admin,event realisasi admin,model_smartpolling_event_realisasi,smartpolling.group_admin,1,1,1,1
 access_event_realisasi_relawan,event realisasi relawan,model_smartpolling_event_realisasi,smartpolling.group_relawan,1,0,0,0
 access_event_realisasi_viewer,event realisasi viewer,model_smartpolling_event_realisasi,smartpolling.group_viewer,1,0,0,0
+access_ai_report_admin,ai report admin,model_smartpolling_ai_report,smartpolling.group_admin,1,1,1,1
+access_ai_report_viewer,ai report viewer,model_smartpolling_ai_report,smartpolling.group_viewer,1,0,1,0

@@ -1,8 +1,27 @@
 /** @odoo-module **/
 
-import { Component, onMounted, onWillUnmount, useRef } from "@odoo/owl";
+import { Component, onMounted, onWillUnmount, useRef, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
+
+const BULAN_SINGKAT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+const AI_STATUS_LABELS = { baik: 'Baik', perlu_perhatian: 'Perlu Perhatian', kritis: 'Kritis' };
+const RUPIAH = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
+// Rp ringkas untuk sumbu/KPI: 1.250.000 → "Rp 1,25 jt"
+function rpRingkas(v) {
+    const n = Number(v) || 0;
+    if (Math.abs(n) >= 1e9) return `Rp ${(n / 1e9).toLocaleString('id-ID', { maximumFractionDigits: 2 })} M`;
+    if (Math.abs(n) >= 1e6) return `Rp ${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`;
+    if (Math.abs(n) >= 1e3) return `Rp ${(n / 1e3).toLocaleString('id-ID', { maximumFractionDigits: 0 })} rb`;
+    return `Rp ${n.toLocaleString('id-ID')}`;
+}
+function parseUtc(s) {
+    if (!s) return null;
+    const d = new Date(s.replace(' ', 'T') + 'Z');
+    return isNaN(d.getTime()) ? null : d;
+}
+// Nama panjang di sumbu grafik dipotong supaya tidak menabrak
+const potong = (s, n = 18) => (s && s.length > n ? s.slice(0, n - 1) + '…' : s || '');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Skala warna choropleth — dinamis mengikuti jumlah DPT tertinggi pada level
@@ -81,18 +100,33 @@ export class SmartPollingDashboard extends Component {
         this.chartPilihanRef   = useRef("chartPilihan");
         this.chartPetugasRef   = useRef("chartPetugas");
         this.chartWeeklyRef    = useRef("chartWeekly");
+        this.kpiRowEventRef    = useRef("kpiRowEvent");
+        this.chartEventDanaRef = useRef("chartEventDana");
+        this.chartEventSuaraRef = useRef("chartEventSuara");
+        this.chartInfoBulananRef = useRef("chartInfoBulanan");
+        this.chartDampakRef    = useRef("chartDampak");
 
         this.orm    = useService("orm");
         this.action = useService("action");
+        this.notification = useService("notification");
 
         this.map = null;
         this.backButton = null;
 
-        this._onWindowResize = () => {
-            this._pilihanChart?.resize();
-            this._petugasChart?.resize();
-            this._weeklyChart?.resize();
-        };
+        this.state = useState({
+            agendaMendatang: [],
+            ai: {
+                canGenerate: false, canDelete: false, hasKey: false,
+                open: false, loading: false, error: '',
+                kabupatenId: '', periode: '30', kabupatenList: [],
+                history: [], expandedId: null, dataOpenId: null,
+            },
+        });
+
+        // Semua instance ECharts milik dashboard (untuk resize & dispose bersama)
+        this._charts = () => [this._pilihanChart, this._petugasChart, this._weeklyChart,
+            this._eventDanaChart, this._eventSuaraChart, this._infoBulananChart, this._dampakChart];
+        this._onWindowResize = () => this._charts().forEach((c) => c?.resize());
 
         onMounted(async () => {
             this._initMap();
@@ -101,14 +135,15 @@ export class SmartPollingDashboard extends Component {
                 this._loadKpis(),
                 this._loadKabupatenChoropleth(),
                 this._loadCharts(),
+                this._loadEventSection(),
+                this._loadInfoSection(),
+                this._initAi(),
             ]);
         });
 
         onWillUnmount(() => {
             window.removeEventListener('resize', this._onWindowResize);
-            this._pilihanChart?.dispose();
-            this._petugasChart?.dispose();
-            this._weeklyChart?.dispose();
+            this._charts().forEach((c) => c?.dispose());
         });
     }
 
@@ -919,6 +954,332 @@ export class SmartPollingDashboard extends Component {
                 },
             }],
         });
+    }
+
+    // ─────────────────────────────────────────────
+    // Helper umum
+    // ─────────────────────────────────────────────
+    _tooltipStyle() {
+        return {
+            backgroundColor: '#fff', borderColor: '#e5e7eb', borderWidth: 1,
+            textStyle: { color: '#374151', fontSize: 12 },
+        };
+    }
+    _axisCategory(labels, rotate = 0) {
+        return {
+            type: 'category', data: labels,
+            axisLabel: { fontSize: 11, color: '#6b7280', rotate, interval: 0 },
+            axisLine: { lineStyle: { color: '#e5e7eb' } }, axisTick: { show: false },
+        };
+    }
+    _axisValue(formatter) {
+        return {
+            type: 'value', minInterval: 1,
+            axisLabel: { fontSize: 11, color: '#9ca3af', formatter },
+            splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } },
+        };
+    }
+    _initChart(key, el) {
+        if (this[key]) this[key].dispose();
+        this[key] = echarts.init(el);
+        return this[key];
+    }
+    openRecord(model, id) {
+        this.action.doAction({
+            type: 'ir.actions.act_window', res_model: model, res_id: id,
+            views: [[false, 'form']], target: 'current',
+        });
+    }
+    fmtDay(s) { const d = parseUtc(s); return d ? d.getDate() : ''; }
+    fmtMon(s) { const d = parseUtc(s); return d ? BULAN_SINGKAT[d.getMonth()] : ''; }
+    fmtTime(s) {
+        const d = parseUtc(s);
+        return d ? d.toLocaleString('id-ID', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    }
+    fmtDateTime(s) {
+        const d = parseUtc(s);
+        return d ? d.toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    }
+    statusLabel(s) { return AI_STATUS_LABELS[s] || 'Analisis'; }
+
+    // ─────────────────────────────────────────────
+    // SEKSI EVENT
+    // ─────────────────────────────────────────────
+    async _loadEventSection() {
+        let data;
+        try {
+            data = await this.orm.call('smartpolling.dashboard', 'get_event_data', [], {});
+        } catch (e) {
+            console.error('Gagal memuat data event:', e);
+            return;
+        }
+        const k = data.kpi;
+        this._renderKpiRow(this.kpiRowEventRef.el, [
+            { icon: 'fa-hourglass-half', color: '#B45309', value: k.menunggu_persetujuan + k.menunggu_verifikasi_laporan,
+              label: `Perlu Tindakan Admin (${k.menunggu_persetujuan} pengajuan, ${k.menunggu_verifikasi_laporan} laporan)`,
+              model: 'smartpolling.event', domain: [['state', 'in', ['diajukan', 'laporan']]] },
+            { icon: 'fa-flag', color: '#1D4ED8', value: k.berjalan, label: 'Event Berjalan (Disetujui)',
+              model: 'smartpolling.event', domain: [['state', '=', 'disetujui']] },
+            { icon: 'fa-money', color: '#714B67', value: rpRingkas(k.total_dana_disetujui), label: 'Total Dana Disetujui',
+              model: 'smartpolling.event', domain: [['state', 'in', ['disetujui', 'laporan', 'selesai']]] },
+            { icon: 'fa-balance-scale', color: k.serapan_pct_event_sudah_lapor > 100 ? '#E74C3C' : '#27AE60',
+              value: `${rpRingkas(k.total_realisasi_dana)} (${k.serapan_pct_event_sudah_lapor}%)`,
+              label: 'Realisasi Dana (serapan event yang sudah lapor)',
+              model: 'smartpolling.event', domain: [['state', 'in', ['laporan', 'selesai']]] },
+        ]);
+        this._renderEventDanaChart(data.per_event);
+        this._renderEventSuaraChart(data.per_event);
+    }
+
+    _renderEventDanaChart(rows) {
+        const el = this.chartEventDanaRef?.el;
+        if (!el || typeof echarts === 'undefined') return;
+        const chart = this._initChart('_eventDanaChart', el);
+        if (!rows.length) {
+            chart.setOption(this._emptyChartOption('Belum ada event yang didanai'));
+            return;
+        }
+        chart.setOption({
+            tooltip: {
+                trigger: 'axis', axisPointer: { type: 'shadow' }, ...this._tooltipStyle(),
+                formatter: (p) => {
+                    const r = rows[p[0].dataIndex];
+                    const status = r.sudah_lapor ? `Serapan ${r.serapan_pct}%` : 'Belum ada berita acara';
+                    return `<b>${r.code}</b><br/>${r.nama}<br/>` +
+                        p.map((s) => `${s.marker} ${s.seriesName}: <b>${RUPIAH.format(s.value)}</b>`).join('<br/>') +
+                        `<br/><span style="color:#6b7280">${status}</span>`;
+                },
+            },
+            legend: { bottom: 0, textStyle: { fontSize: 11, color: '#6b7280' } },
+            grid: { left: 10, right: 16, top: 16, bottom: 70, containLabel: true },
+            xAxis: this._axisCategory(rows.map((r) => potong(r.nama, 14)), rows.length > 4 ? 30 : 0),
+            yAxis: this._axisValue(rpRingkas),
+            series: [
+                { name: 'Dana disetujui', type: 'bar', barMaxWidth: 22, itemStyle: { color: '#C9B3C2', borderRadius: [3, 3, 0, 0] },
+                  data: rows.map((r) => r.dana_disetujui) },
+                // itemStyle seri = warna legenda; per-batang ditimpa merah bila melebihi dana
+                { name: 'Realisasi', type: 'bar', barMaxWidth: 22, itemStyle: { color: '#714B67' },
+                  data: rows.map((r) => ({
+                      value: r.realisasi_dana,
+                      // merah bila melebihi dana disetujui
+                      itemStyle: { color: r.realisasi_dana > r.dana_disetujui ? '#E74C3C' : '#714B67', borderRadius: [3, 3, 0, 0] },
+                  })) },
+            ],
+        });
+        chart.off('click');
+        chart.on('click', (p) => this.openRecord('smartpolling.event', rows[p.dataIndex].id));
+    }
+
+    _renderEventSuaraChart(rows) {
+        const el = this.chartEventSuaraRef?.el;
+        if (!el || typeof echarts === 'undefined') return;
+        const chart = this._initChart('_eventSuaraChart', el);
+        if (!rows.length) {
+            chart.setOption(this._emptyChartOption('Belum ada event yang didanai'));
+            return;
+        }
+        chart.setOption({
+            tooltip: {
+                trigger: 'axis', axisPointer: { type: 'shadow' }, ...this._tooltipStyle(),
+                formatter: (p) => {
+                    const r = rows[p[0].dataIndex];
+                    const biaya = r.memilih ? `Biaya/suara: ${RUPIAH.format(r.biaya_per_suara)}` : '';
+                    return `<b>${r.code}</b><br/>${r.nama}<br/>` +
+                        p.map((s) => `${s.marker} ${s.seriesName}: <b>${s.value}</b>`).join('<br/>') +
+                        `<br/><span style="color:#6b7280">Capaian ${r.capaian_target_pct}% ${biaya ? '· ' + biaya : ''}</span>`;
+                },
+            },
+            legend: { bottom: 0, textStyle: { fontSize: 11, color: '#6b7280' } },
+            grid: { left: 10, right: 16, top: 16, bottom: 70, containLabel: true },
+            xAxis: this._axisCategory(rows.map((r) => potong(r.nama, 14)), rows.length > 4 ? 30 : 0),
+            yAxis: this._axisValue(),
+            series: [
+                { name: 'Target DPT', type: 'bar', barMaxWidth: 18, itemStyle: { color: '#C9B3C2', borderRadius: [3, 3, 0, 0] },
+                  data: rows.map((r) => r.target_dpt) },
+                { name: 'DPT tersurvey', type: 'bar', barMaxWidth: 18, itemStyle: { color: '#714B67', borderRadius: [3, 3, 0, 0] },
+                  data: rows.map((r) => r.tersurvey) },
+                { name: 'Suara Memilih', type: 'bar', barMaxWidth: 18, itemStyle: { color: PILIHAN_COLORS.memilih, borderRadius: [3, 3, 0, 0] },
+                  data: rows.map((r) => r.memilih) },
+            ],
+        });
+        chart.off('click');
+        chart.on('click', (p) => this.openRecord('smartpolling.event', rows[p.dataIndex].id));
+    }
+
+    // ─────────────────────────────────────────────
+    // SEKSI AGENDA & BERITA + DAMPAK KEGIATAN
+    // ─────────────────────────────────────────────
+    async _loadInfoSection() {
+        let data;
+        try {
+            data = await this.orm.call('smartpolling.dashboard', 'get_info_data', [], {});
+        } catch (e) {
+            console.error('Gagal memuat data agenda/berita:', e);
+            return;
+        }
+        this.state.agendaMendatang = data.agenda_mendatang;
+        this._renderInfoBulananChart(data.bulanan);
+        this._renderDampakChart(data.dampak);
+    }
+
+    _renderInfoBulananChart(rows) {
+        const el = this.chartInfoBulananRef?.el;
+        if (!el || typeof echarts === 'undefined') return;
+        const chart = this._initChart('_infoBulananChart', el);
+        if (!rows.some((r) => r.agenda_terbit || r.agenda_batal || r.berita_terbit)) {
+            chart.setOption(this._emptyChartOption('Belum ada agenda/berita terbit'));
+            return;
+        }
+        chart.setOption({
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...this._tooltipStyle() },
+            legend: { bottom: 0, textStyle: { fontSize: 11, color: '#6b7280' } },
+            grid: { left: 10, right: 16, top: 16, bottom: 50, containLabel: true },
+            xAxis: this._axisCategory(rows.map((r) => r.bulan)),
+            yAxis: this._axisValue(),
+            series: [
+                { name: 'Agenda terbit', type: 'bar', stack: 'agenda', barMaxWidth: 26, itemStyle: { color: '#714B67' },
+                  data: rows.map((r) => r.agenda_terbit) },
+                { name: 'Agenda batal', type: 'bar', stack: 'agenda', barMaxWidth: 26, itemStyle: { color: '#E5A3A0' },
+                  data: rows.map((r) => r.agenda_batal) },
+                { name: 'Berita terbit', type: 'line', symbolSize: 6,
+                  itemStyle: { color: '#2874A6' }, lineStyle: { width: 2.5 },
+                  data: rows.map((r) => r.berita_terbit) },
+            ],
+        });
+    }
+
+    _renderDampakChart(dampak) {
+        const el = this.chartDampakRef?.el;
+        if (!el || typeof echarts === 'undefined') return;
+        const chart = this._initChart('_dampakChart', el);
+        const rows = dampak.kegiatan || [];
+        if (!rows.length) {
+            chart.setOption(this._emptyChartOption('Belum ada agenda/event yang sudah berlangsung dalam 90 hari terakhir'));
+            return;
+        }
+        const avg = dampak.rata2_survey_harian;
+        chart.setOption({
+            tooltip: {
+                trigger: 'axis', axisPointer: { type: 'shadow' }, ...this._tooltipStyle(),
+                formatter: (p) => {
+                    const r = rows[p[0].dataIndex];
+                    const rasio = r.rasio_vs_rata2 == null ? '-' : `${r.rasio_vs_rata2}× rata-rata`;
+                    return `<b>${r.jenis}: ${r.nama}</b><br/>${r.tanggal} (${r.jumlah_hari} hari)<br/>` +
+                        `Survey: <b>${r.survey}</b> (${r.survey_per_hari}/hari)<br/>${rasio}`;
+                },
+            },
+            grid: { left: 10, right: 24, top: 24, bottom: 60, containLabel: true },
+            xAxis: this._axisCategory(rows.map((r) => potong(r.nama, 14)), rows.length > 5 ? 30 : 0),
+            yAxis: this._axisValue(),
+            series: [{
+                type: 'bar', barMaxWidth: 28,
+                data: rows.map((r) => ({
+                    value: r.survey_per_hari,
+                    itemStyle: {
+                        color: r.jenis === 'Event' ? '#714B67' : '#2874A6',
+                        opacity: r.survey_per_hari >= avg ? 1 : 0.45,
+                        borderRadius: [3, 3, 0, 0],
+                    },
+                })),
+                markLine: {
+                    symbol: 'none', silent: true,
+                    lineStyle: { color: '#F39C12', type: 'dashed', width: 1.5 },
+                    label: { formatter: `rata-rata ${avg}/hari`, color: '#B45309', fontSize: 10, position: 'insideEndTop' },
+                    data: [{ yAxis: avg }],
+                },
+            }],
+            graphic: [{
+                type: 'text', right: 8, top: 0,
+                style: {
+                    text: '{e|■} Event   {a|■} Agenda   (pudar = di bawah rata-rata)',
+                    fill: '#6b7280', fontSize: 10,
+                    rich: { e: { fill: '#714B67', fontSize: 12 }, a: { fill: '#2874A6', fontSize: 12 } },
+                },
+            }],
+        });
+    }
+
+    // ─────────────────────────────────────────────
+    // PANEL ANALISIS AI
+    // ─────────────────────────────────────────────
+    async _initAi() {
+        try {
+            const info = await this.orm.call('smartpolling.ai.report', 'can_use', [], {});
+            Object.assign(this.state.ai, {
+                canGenerate: info.can_generate, canDelete: info.can_delete, hasKey: info.has_key,
+            });
+            if (info.can_generate) {
+                this.state.ai.kabupatenList = await this.orm.searchRead(
+                    'smartpolling.kabupaten', [], ['name'], { order: 'name asc' });
+            }
+        } catch (e) {
+            // Grup tanpa akses (mis. relawan) → panel tidak ditampilkan
+            this.state.ai.canGenerate = false;
+        }
+    }
+    async toggleAiPanel() {
+        this.state.ai.open = !this.state.ai.open;
+        if (this.state.ai.open) await this._loadAiHistory();
+    }
+    async _loadAiHistory() {
+        this.state.ai.history = await this.orm.call('smartpolling.ai.report', 'get_history', [], { limit: 20 });
+        if (this.state.ai.history.length && !this.state.ai.expandedId) {
+            this.state.ai.expandedId = this.state.ai.history[0].id;
+        }
+    }
+    async onAnalyze() {
+        const ai = this.state.ai;
+        ai.loading = true;
+        ai.error = '';
+        try {
+            const res = await this.orm.call('smartpolling.ai.report', 'generate', [], {
+                kabupaten_id: ai.kabupatenId ? Number(ai.kabupatenId) : null,
+                periode_hari: Number(ai.periode),
+            });
+            if (res.error === 'no_api_key') {
+                ai.hasKey = false;
+            } else if (res.error) {
+                ai.error = `Gagal membuat analisis: ${res.detail || 'coba lagi beberapa saat.'}`;
+            } else {
+                ai.expandedId = res.id;
+                await this._loadAiHistory();
+            }
+        } catch (e) {
+            ai.error = 'Terjadi kesalahan saat menghubungi server.';
+        } finally {
+            ai.loading = false;
+        }
+    }
+    toggleReport(id) {
+        this.state.ai.expandedId = this.state.ai.expandedId === id ? null : id;
+        this.state.ai.dataOpenId = null;
+    }
+    toggleData(id) {
+        this.state.ai.dataOpenId = this.state.ai.dataOpenId === id ? null : id;
+    }
+    async deleteReport(id) {
+        if (!window.confirm('Hapus riwayat analisis ini?')) return;
+        await this.orm.unlink('smartpolling.ai.report', [id]);
+        this.state.ai.history = this.state.ai.history.filter((r) => r.id !== id);
+    }
+    async copyReport(r) {
+        const h = r.hasil || {};
+        const lines = [
+            `${h.judul || r.judul}`,
+            `Cakupan: ${r.cakupan} · Periode: ${r.periode_hari} hari · Status: ${this.statusLabel(r.status)}`,
+            '', h.ringkasan || '',
+        ];
+        if (h.temuan?.length) lines.push('', 'TEMUAN KUNCI', ...h.temuan.map((t) => `- [${t.tingkat}] ${t.judul}: ${t.detail}`));
+        if (h.wilayah_prioritas?.length) lines.push('', 'WILAYAH PRIORITAS', ...h.wilayah_prioritas.map((w, i) => `${i + 1}. ${w.wilayah} — ${w.alasan}`));
+        if (h.evaluasi_event) lines.push('', 'EVALUASI EVENT', h.evaluasi_event);
+        if (h.rekomendasi?.length) lines.push('', 'REKOMENDASI', ...h.rekomendasi.map((k) => `- (${k.prioritas}) ${k.aksi} — ${k.alasan}`));
+        if (h.catatan_data) lines.push('', `Catatan data: ${h.catatan_data}`);
+        try {
+            await navigator.clipboard.writeText(lines.join('\n'));
+            this.notification.add('Laporan disalin ke clipboard.', { type: 'success' });
+        } catch (e) {
+            this.notification.add('Gagal menyalin (izin clipboard browser).', { type: 'warning' });
+        }
     }
 }
 

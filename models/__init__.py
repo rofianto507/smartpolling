@@ -10,3 +10,6 @@ from . import relawan_create_user_wizard
 from . import berita
 from . import agenda
 from . import event
+from . import dashboard
+from . import ai_report
+from . import res_config_settings
