@@ -1,6 +1,6 @@
 {
     'name': 'SmartPolling',
-    'version': '19.0.1.3.2',
+    'version': '19.0.1.3.3',
     'summary': 'Pendataan Relawan, TPS, DPT, dan Survey Preferensi Pemilih.',
     'description': """
 SmartPolling adalah modul Odoo untuk manajemen data pemenangan pemilu berbasis wilayah.

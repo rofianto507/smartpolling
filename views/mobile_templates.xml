@@ -15,6 +15,10 @@
                 <meta name="apple-mobile-web-app-capable" content="yes"/>
                 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
                 <title>SmartPolling – Relawan</title>
+                <!-- favicon dari Settings > Sel App Config (jika modul itu terpasang); jika tidak, bawaan Odoo -->
+                <t t-set="sp_favicon" t-value="request.env['ir.config_parameter'].sudo().get_param('sel_app_config.favicon_url')"/>
+                <link rel="icon" t-att-href="sp_favicon or '/web/static/img/favicon.ico'"/>
+                <link t-if="sp_favicon" rel="apple-touch-icon" t-att-href="sp_favicon + '&amp;size=180'"/>
                 <link rel="preconnect" href="https://fonts.googleapis.com"/>
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
                 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;display=swap"/>
@@ -154,6 +158,9 @@
                 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
                 <meta name="apple-mobile-web-app-title" content="SmartPolling"/>
                 <title>SmartPolling Mobile</title>
+                <t t-set="sp_favicon" t-value="request.env['ir.config_parameter'].sudo().get_param('sel_app_config.favicon_url')"/>
+                <link rel="icon" t-att-href="sp_favicon or '/web/static/img/favicon.ico'"/>
+                <link t-if="sp_favicon" rel="apple-touch-icon" t-att-href="sp_favicon + '&amp;size=180'"/>
                 <link rel="preconnect" href="https://fonts.googleapis.com"/>
                 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&amp;display=swap"/>
                 <link rel="stylesheet" href="/smartpolling/static/lib/fontawesome/css/font-awesome.css"/>
