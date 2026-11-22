@@ -46,7 +46,7 @@ Data wilayah (kabupaten/kecamatan/desa beserta GeoJSON) **tidak** disertakan dal
 
 ## Penggunaan
 
-- **Backend**: menu **SmartPolling** → Dashboard, Data Wilayah, Relawan, TPS, DPT, Hasil Survey, Event, Informasi (Berita, Agenda). Di menu Event, filter **Perlu Tindakan Admin** menampilkan pengajuan dan berita acara yang menunggu keputusan.
+- **Backend**: menu **SmartPolling** → Dashboard · Wilayah & Tim (Kabupaten/Kota, Kecamatan, Desa/Kelurahan, TPS, Relawan) · Pemilih (DPT, Survey) · Kegiatan (Event, Menunggu Persetujuan, Agenda, Berita) · Konfigurasi (Pengaturan AI, khusus administrator sistem). **Kegiatan → Menunggu Persetujuan** langsung menampilkan pengajuan dana dan berita acara yang menunggu keputusan admin.
 - **App mobile relawan**: buka `http://<host>:8069/mobile` dan login dengan akun relawan (user harus memiliki *Relawan Terkait*).
 
 ## Pengujian

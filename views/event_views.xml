@@ -227,5 +227,19 @@
                    Pengajuan masuk ke sini untuk disetujui dan didanai, lalu dievaluasi setelah berita acara dikirim.</p>
             </field>
         </record>
+
+        <!-- Jalan pintas menu "Kegiatan → Menunggu Persetujuan" -->
+        <record id="action_smartpolling_event_pending" model="ir.actions.act_window">
+            <field name="name">Menunggu Persetujuan</field>
+            <field name="res_model">smartpolling.event</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('state', 'in', ('diajukan', 'laporan'))]</field>
+            <field name="search_view_id" ref="view_smartpolling_event_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">Tidak ada yang menunggu keputusan</p>
+                <p>Di sini muncul pengajuan dana event yang menunggu persetujuan dan berita acara
+                   yang menunggu verifikasi. Semua sudah beres.</p>
+            </field>
+        </record>
     </data>
 </odoo>

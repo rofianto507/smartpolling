@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
+        <!-- sequence 1 (bukan 5): Odoo membuka aplikasi dengan sequence terkecil saat login.
+             Discuss (mail) juga 5 dan menang karena ID-nya lebih kecil. -->
         <menuitem
             id="menu_smartpolling_root"
             name="SmartPolling"
-            sequence="5"/>
+            sequence="1"/>
+
+        <!-- ═══ Susunan menu atas (mengikuti alur kerja) ═══
+             Dashboard | Wilayah &amp; Tim | Pemilih | Kegiatan | Konfigurasi
+             Catatan: ID menu lama dipakai ulang (hanya nama/induk berubah) supaya update modul
+             tidak menghapus record: menu_smartpolling_wilayah = "Wilayah &amp; Tim",
+             menu_smartpolling_informasi = "Kegiatan". -->
 
         <!-- Dashboard: semua grup smartpolling (data otomatis ter-scope via ir.rule) -->
         <menuitem
@@ -15,10 +23,10 @@
             groups="smartpolling.group_smartpolling_user"
             sequence="1"/>
 
-        <!-- Data Wilayah: semua grup smartpolling -->
+        <!-- ─── Wilayah &amp; Tim: struktur lapangan (wilayah → TPS → relawan) ─── -->
         <menuitem
             id="menu_smartpolling_wilayah"
-            name="Data Wilayah"
+            name="Wilayah &amp; Tim"
             parent="menu_smartpolling_root"
             groups="smartpolling.group_smartpolling_user"
             sequence="10"/>
@@ -43,75 +51,81 @@
             action="action_smartpolling_desa"
             groups="smartpolling.group_smartpolling_user"
             sequence="3"/>
-
-        <!-- Relawan -->
-        <menuitem
-            id="menu_smartpolling_relawan"
-            name="Relawan"
-            parent="menu_smartpolling_root"
-            action="action_smartpolling_relawan"
-            groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
-            sequence="20"/>
-
-        <!-- TPS -->
         <menuitem
             id="menu_smartpolling_tps"
             name="TPS"
-            parent="menu_smartpolling_root"
+            parent="menu_smartpolling_wilayah"
             action="action_smartpolling_tps"
             groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
-            sequence="30"/>
+            sequence="4"/>
+        <menuitem
+            id="menu_smartpolling_relawan"
+            name="Relawan"
+            parent="menu_smartpolling_wilayah"
+            action="action_smartpolling_relawan"
+            groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
+            sequence="5"/>
 
-        <!-- DPT -->
+        <!-- ─── Pemilih: data DPT dan hasil survey-nya ─── -->
+        <menuitem
+            id="menu_smartpolling_pemilih"
+            name="Pemilih"
+            parent="menu_smartpolling_root"
+            groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
+            sequence="20"/>
         <menuitem
             id="menu_smartpolling_dpt"
             name="DPT"
-            parent="menu_smartpolling_root"
+            parent="menu_smartpolling_pemilih"
             action="action_smartpolling_dpt"
             groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
-            sequence="40"/>
-
-        <!-- Voter / Hasil Survey -->
+            sequence="1"/>
         <menuitem
             id="menu_smartpolling_voter"
-            name="Hasil Survey"
-            parent="menu_smartpolling_root"
+            name="Survey"
+            parent="menu_smartpolling_pemilih"
             action="action_smartpolling_voter"
             groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
-            sequence="50"/>
+            sequence="2"/>
 
-        <!-- Event penggalangan suara: pengajuan dari petugas, persetujuan & evaluasi oleh admin pusat -->
+        <!-- ─── Kegiatan: event penggalangan suara, agenda, dan berita (tampil ke petugas di /mobile) ─── -->
+        <menuitem
+            id="menu_smartpolling_informasi"
+            name="Kegiatan"
+            parent="menu_smartpolling_root"
+            groups="smartpolling.group_admin,smartpolling.group_viewer"
+            sequence="30"/>
         <menuitem
             id="menu_smartpolling_event"
             name="Event"
-            parent="menu_smartpolling_root"
+            parent="menu_smartpolling_informasi"
             action="action_smartpolling_event"
             groups="smartpolling.group_admin,smartpolling.group_viewer"
-            sequence="55"/>
-
-        <!-- Informasi: Berita & Agenda (ditampilkan ke petugas di app /mobile) -->
-        <menuitem
-            id="menu_smartpolling_informasi"
-            name="Informasi"
-            parent="menu_smartpolling_root"
-            groups="smartpolling.group_admin,smartpolling.group_viewer"
-            sequence="60"/>
-        <menuitem
-            id="menu_smartpolling_berita"
-            name="Berita"
-            parent="menu_smartpolling_informasi"
-            action="action_smartpolling_berita"
-            groups="smartpolling.group_admin,smartpolling.group_viewer"
             sequence="1"/>
+        <!-- Jalan pintas admin: pengajuan dana yang menunggu persetujuan + berita acara yang menunggu verifikasi -->
+        <menuitem
+            id="menu_smartpolling_event_pending"
+            name="Menunggu Persetujuan"
+            parent="menu_smartpolling_informasi"
+            action="action_smartpolling_event_pending"
+            groups="smartpolling.group_admin,smartpolling.group_viewer"
+            sequence="2"/>
         <menuitem
             id="menu_smartpolling_agenda"
             name="Agenda"
             parent="menu_smartpolling_informasi"
             action="action_smartpolling_agenda"
             groups="smartpolling.group_admin,smartpolling.group_viewer"
-            sequence="2"/>
+            sequence="3"/>
+        <menuitem
+            id="menu_smartpolling_berita"
+            name="Berita"
+            parent="menu_smartpolling_informasi"
+            action="action_smartpolling_berita"
+            groups="smartpolling.group_admin,smartpolling.group_viewer"
+            sequence="4"/>
 
-        <!-- Konfigurasi: API key AI = rahasia sistem → khusus administrator Settings Odoo -->
+        <!-- ─── Konfigurasi: API key AI = rahasia sistem → khusus administrator Settings Odoo ─── -->
         <menuitem
             id="menu_smartpolling_konfigurasi"
             name="Konfigurasi"
