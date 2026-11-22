@@ -1,6 +1,7 @@
 from markupsafe import Markup
 
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import ValidationError
 from odoo.tools import format_datetime
 
 
@@ -41,6 +42,16 @@ class Voter(models.Model):
         ('belum_menentukan', 'Belum Menentukan'),
         ('tidak_memilih', 'Tidak Memilih'),
     ], string='Pilihan', required=True)
+    event_id = fields.Many2one(
+        'smartpolling.event', string='Event', index=True, ondelete='set null',
+        help='Survey yang dilakukan dalam rangka event ini dihitung sebagai realisasi target event.',
+    )
+
+    @api.constrains('event_id')
+    def _check_event(self):
+        for rec in self:
+            if rec.event_id and rec.event_id.state not in ('disetujui', 'laporan', 'selesai'):
+                raise ValidationError(_('Survey hanya bisa dikaitkan ke event yang sudah disetujui.'))
 
     def _pilihan_label(self):
         return dict(self._fields['pilihan'].selection).get(self.pilihan, self.pilihan)

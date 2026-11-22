@@ -14,6 +14,7 @@
                     <field name="desa_id" optional="show"/>
                     <field name="tps_id"/>
                     <field name="petugas_id"/>
+                    <field name="event_id" optional="show"/>
                     <field name="pilihan" widget="badge"
                         decoration-success="pilihan == 'memilih'"
                         decoration-warning="pilihan == 'ragu_ragu'"
@@ -34,6 +35,7 @@
                                 <field name="dpt_id"/>
                                 <field name="tanggal"/>
                                 <field name="pilihan"/>
+                                <field name="event_id"/>
                             </group>
                             <group>
                                 <field name="foto" widget="image"/>
@@ -91,7 +93,9 @@
                     <field name="kecamatan_id"/>
                     <field name="kabupaten_id"/>
                     <field name="petugas_id"/>
+                    <field name="event_id"/>
                     <separator/>
+                    <filter string="Survey Event" name="filter_event" domain="[('event_id', '!=', False)]"/>
                     <filter string="Memilih" name="filter_memilih" domain="[('pilihan', '=', 'memilih')]"/>
                     <filter string="Ragu-ragu" name="filter_ragu_ragu" domain="[('pilihan', '=', 'ragu_ragu')]"/>
                     <filter string="Belum Menentukan" name="filter_belum_menentukan" domain="[('pilihan', '=', 'belum_menentukan')]"/>

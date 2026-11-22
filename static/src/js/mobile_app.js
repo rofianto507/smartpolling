@@ -132,6 +132,40 @@
     <i t-else="" class="fa fa-chevron-right sm-list-arrow"/>
 </div>`;
 
+    // Bar perbandingan rencana vs realisasi (dipakai di Evaluasi Event).
+    // Context: `rows` = [{label, value, text, cls}] dengan cls: plan | real | vote | over
+    const CMP_TPL = xml/* xml */`
+<div class="sm-cmp">
+    <t t-foreach="rows" t-as="row" t-key="row_index">
+        <div class="sm-cmp-row">
+            <div class="sm-cmp-label"><span t-esc="row.label"/><b t-esc="row.text"/></div>
+            <div class="sm-cmp-track">
+                <div t-attf-class="sm-cmp-fill sm-cmp-fill--{{row.cls}}" t-attf-style="width:{{ this.cmpWidth(row, rows) }}%"/>
+            </div>
+        </div>
+    </t>
+</div>`;
+
+    const EVENT_STATE_LABELS = {
+        draft: 'Draft', diajukan: 'Menunggu Persetujuan', disetujui: 'Disetujui',
+        ditolak: 'Ditolak', laporan: 'Laporan Dikirim', selesai: 'Selesai',
+    };
+    const RP = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
+    const NUM = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 });
+    const pad2 = (n) => String(n).padStart(2, '0');
+    // UTC "YYYY-MM-DD HH:MM:SS" → nilai <input type="datetime-local"> (waktu lokal perangkat)
+    function utcToLocalInput(dtStr) {
+        const d = parseUtc(dtStr);
+        if (!d) return '';
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+    // nilai datetime-local (lokal) → UTC "YYYY-MM-DD HH:MM:SS" untuk server
+    function localInputToUtc(value) {
+        if (!value) return null;
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 19).replace('T', ' ');
+    }
+
     // ── App Component ────────────────────────────────────────────────────
     class App extends Component {
         static template = xml/* xml */`
@@ -143,6 +177,11 @@
         <div class="sm-appbar-content">
             <div class="sm-appbar-title">SmartPolling Mobile</div>
             <div class="sm-appbar-sub" t-esc="initData.relawan_name"/>
+        </div>
+        <div class="sm-appbar-actions">
+            <button class="sm-appbar-btn" t-on-click="() => this.openInfo('berita')" title="Berita &amp; Agenda">
+                <i class="fa fa-newspaper-o"/> Info
+            </button>
         </div>
     </div>
 
@@ -184,6 +223,14 @@
                     </div>
                 </t>
             </div>
+
+            <t t-if="state.kpi and state.kpi.event_perlu_laporan">
+                <div class="sm-alert sm-alert--warning sm-alert--action" t-on-click="() => this.openEventTab('berjalan')">
+                    <i class="fa fa-file-text-o sm-alert-icon"/>
+                    <span><b t-esc="state.kpi.event_perlu_laporan"/> event sudah selesai dan menunggu berita acara. Ketuk untuk mengisi.</span>
+                    <i class="fa fa-chevron-right"/>
+                </div>
+            </t>
 
             <div class="sm-chart-card">
                 <div class="sm-chart-header"><i class="fa fa-bar-chart"/> Aktivitas Survey 7 Hari Terakhir</div>
@@ -320,8 +367,8 @@
         <button class="sm-fab sm-fab--show" t-on-click="() => this.openSurveyAddFor(null, '')"><i class="fa fa-plus"/></button>
     </div>
 
-    <!-- ══ TAB: INFO (Berita & Agenda) ══ -->
-    <div t-attf-class="sm-tab {{ !state.subpage and state.tab === 'info' ? 'active' : '' }}">
+    <!-- ══ SUBPAGE: INFO (Berita & Agenda) — dibuka dari tombol Info / "Lihat semua" ══ -->
+    <t t-if="state.subpage === 'info'">
         <div class="sm-page-body">
             <div class="sm-segment">
                 <button t-attf-class="sm-segment-btn {{ state.infoTab === 'berita' ? 'active' : '' }}" t-on-click="() => this.switchInfoTab('berita')">
@@ -394,6 +441,50 @@
                 </t>
             </t>
         </div>
+    </t>
+
+    <!-- ══ TAB: EVENT ══ -->
+    <div t-attf-class="sm-tab {{ !state.subpage and state.tab === 'event' ? 'active' : '' }}">
+        <div class="sm-page-body">
+            <div class="sm-chip-row">
+                <t t-foreach="this.eventGroups" t-as="g" t-key="g.key">
+                    <button t-attf-class="sm-chip {{ state.eventGroup === g.key ? 'active' : '' }}" t-on-click="() => this.filterEventGroup(g.key)" t-esc="g.label"/>
+                </t>
+            </div>
+            <t t-if="state.eventLoading and !state.eventList.length">
+                <div class="sm-loading-state"><i class="fa fa-spinner fa-spin"/><span>Memuat event...</span></div>
+            </t>
+            <t t-elif="!state.eventList.length">
+                <div class="sm-empty-state"><i class="fa fa-flag-o"/>Belum ada event.<br/>Ketuk <b>+</b> untuk mengajukan event penggalangan suara.</div>
+            </t>
+            <t t-else="">
+                <div class="sm-list">
+                    <t t-foreach="state.eventList" t-as="e" t-key="e.id">
+                        <div class="sm-list-item sm-event-item" t-on-click="() => this.openEventDetail(e.id)">
+                            <div class="sm-agenda-date">
+                                <div class="sm-agenda-day" t-esc="this.agendaDay(e.mulai)"/>
+                                <div class="sm-agenda-mon" t-esc="this.agendaMon(e.mulai)"/>
+                            </div>
+                            <div class="sm-list-item-body">
+                                <div class="sm-list-name" t-esc="e.nama"/>
+                                <div class="sm-list-meta"><i class="fa fa-money"/> <t t-esc="this.fmtRp(e.dana_disetujui || e.total_anggaran)"/>
+                                    · <i class="fa fa-bullseye"/> <t t-esc="e.realisasi_dpt"/>/<t t-esc="e.target_dpt"/> DPT</div>
+                                <div class="sm-mini-progress"><div t-attf-style="width:{{ this.pct(e.realisasi_dpt, e.target_dpt) }}%"/></div>
+                            </div>
+                            <span t-attf-class="sm-badge sm-badge--ev-{{e.state}}" t-esc="this.eventStateLabel(e.state)"/>
+                        </div>
+                    </t>
+                </div>
+                <t t-if="state.eventList.length &lt; state.eventTotal">
+                    <div class="sm-list-footer">
+                        <button class="sm-btn-secondary" t-on-click="() => this._loadEventList(false)" t-att-disabled="state.eventLoading">
+                            Muat Lebih Banyak (<t t-esc="state.eventList.length"/>/<t t-esc="state.eventTotal"/>)
+                        </button>
+                    </div>
+                </t>
+            </t>
+        </div>
+        <button class="sm-fab sm-fab--show" t-on-click="() => this.openEventForm(null)"><i class="fa fa-plus"/></button>
     </div>
 
     <!-- ══ TAB: PROFIL ══ -->
@@ -664,6 +755,21 @@
                     </select>
                 </div>
 
+                <t t-if="state.activeEvents.length">
+                    <div class="sm-card">
+                        <div class="sm-card-title"><i class="fa fa-flag"/> Bagian dari Event</div>
+                        <select class="sm-select" t-model="state.surveyForm.event_id">
+                            <option value="" t-att-selected="!state.surveyForm.event_id">-- Bukan survey event --</option>
+                            <!-- t-att-selected eksplisit: opsi dimuat async setelah t-model memasang nilai,
+                                 tanpa ini dropdown menampilkan "Bukan survey event" padahal event terpilih -->
+                            <t t-foreach="state.activeEvents" t-as="ev" t-key="ev.id">
+                                <option t-att-value="ev.id" t-att-selected="this.isSurveyEvent(ev.id)" t-esc="ev.nama"/>
+                            </t>
+                        </select>
+                        <div class="sm-hint">Survey yang ditandai dihitung sebagai realisasi target event.</div>
+                    </div>
+                </t>
+
                 <div class="sm-card">
                     <div class="sm-card-title"><i class="fa fa-camera"/> Foto Dokumentasi (opsional)</div>
                     <t t-if="state.surveyForm.fotoPreview">
@@ -747,6 +853,265 @@
         </div>
     </t>
 
+    <!-- ══ SUBPAGE: EVENT DETAIL ══ -->
+    <t t-if="state.subpage === 'event-detail'">
+        <div class="sm-page-body">
+            <t t-if="!state.eventDetail">
+                <div class="sm-loading-state"><i class="fa fa-spinner fa-spin"/><span>Memuat event...</span></div>
+            </t>
+            <t t-else="">
+                <t t-set="ev" t-value="state.eventDetail"/>
+                <div class="sm-card">
+                    <div class="sm-ev-head">
+                        <div class="sm-ev-code" t-esc="ev.code"/>
+                        <span t-attf-class="sm-badge sm-badge--ev-{{ev.state}}" t-esc="this.eventStateLabel(ev.state)"/>
+                    </div>
+                    <div class="sm-article-title" t-esc="ev.nama"/>
+                    <div class="sm-info-row"><span class="sm-info-label"><i class="fa fa-clock-o"/> Waktu</span><span class="sm-info-value" t-esc="this.fmtAgendaWaktu(ev.mulai, ev.selesai)"/></div>
+                    <div class="sm-info-row"><span class="sm-info-label"><i class="fa fa-map-marker"/> Lokasi</span><span class="sm-info-value" t-esc="ev.lokasi || '-'"/></div>
+                    <div class="sm-info-row"><span class="sm-info-label"><i class="fa fa-bullseye"/> Target DPT</span><span class="sm-info-value"><t t-esc="ev.target_dpt"/> DPT tersurvey</span></div>
+                    <t t-if="ev.deskripsi"><div class="sm-ev-desc" t-esc="ev.deskripsi"/></t>
+                </div>
+
+                <div t-attf-class="sm-alert sm-alert--{{ this.eventHint(ev).type }}">
+                    <i t-attf-class="fa {{ this.eventHint(ev).icon }} sm-alert-icon"/>
+                    <span t-esc="this.eventHint(ev).text"/>
+                </div>
+                <t t-if="ev.catatan_admin and ['draft', 'ditolak', 'disetujui'].includes(ev.state)">
+                    <div class="sm-alert sm-alert--error">
+                        <i class="fa fa-commenting sm-alert-icon"/>
+                        <span><b>Catatan admin pusat:</b><br/><t t-esc="ev.catatan_admin"/></span>
+                    </div>
+                </t>
+
+                <!-- Evaluasi: tampil setelah berita acara dikirim -->
+                <t t-if="['laporan', 'selesai'].includes(ev.state)">
+                    <div class="sm-card">
+                        <div class="sm-card-title"><i class="fa fa-balance-scale"/> Evaluasi Dana</div>
+                        <t t-call="${CMP_TPL}">
+                            <t t-set="rows" t-value="[
+                                {label: 'Dana disetujui', value: ev.dana_disetujui, text: this.fmtRp(ev.dana_disetujui), cls: 'plan'},
+                                {label: 'Realisasi dana', value: ev.total_realisasi, text: this.fmtRp(ev.total_realisasi), cls: ev.selisih_dana &lt; 0 ? 'over' : 'real'},
+                            ]"/>
+                        </t>
+                        <div class="sm-ev-stats">
+                            <div><span>Serapan</span><b t-esc="ev.persen_serapan + '%'"/></div>
+                            <div><span t-esc="ev.selisih_dana &lt; 0 ? 'Lebih bayar' : 'Sisa dana'"/>
+                                <b t-attf-class="{{ ev.selisih_dana &lt; 0 ? 'sm-neg' : 'sm-pos' }}" t-esc="this.fmtRp(Math.abs(ev.selisih_dana))"/></div>
+                        </div>
+                    </div>
+                    <div class="sm-card">
+                        <div class="sm-card-title"><i class="fa fa-bullseye"/> Evaluasi Target Suara</div>
+                        <t t-call="${CMP_TPL}">
+                            <t t-set="rows" t-value="[
+                                {label: 'Target DPT', value: ev.target_dpt, text: ev.target_dpt + ' DPT', cls: 'plan'},
+                                {label: 'DPT tersurvey', value: ev.realisasi_dpt, text: ev.realisasi_dpt + ' DPT', cls: 'real'},
+                                {label: 'Suara Memilih', value: ev.realisasi_memilih, text: ev.realisasi_memilih + ' suara', cls: 'vote'},
+                            ]"/>
+                        </t>
+                        <div class="sm-ev-stats">
+                            <div><span>Capaian target</span><b t-esc="ev.persen_target + '%'"/></div>
+                            <div><span>Memilih</span><b t-esc="ev.persen_memilih + '%'"/></div>
+                            <div><span>Biaya / suara</span><b t-esc="ev.realisasi_memilih ? this.fmtRp(ev.biaya_per_suara) : '-'"/></div>
+                        </div>
+                    </div>
+                </t>
+                <!-- Progres survey selama event berjalan -->
+                <t t-elif="ev.state === 'disetujui'">
+                    <div class="sm-card">
+                        <div class="sm-card-title"><i class="fa fa-line-chart"/> Progres Target</div>
+                        <div class="sm-ev-progress-label"><b t-esc="ev.realisasi_dpt"/> dari <t t-esc="ev.target_dpt"/> DPT tersurvey (<t t-esc="ev.realisasi_memilih"/> memilih)</div>
+                        <div class="sm-mini-progress sm-mini-progress--lg"><div t-attf-style="width:{{ this.pct(ev.realisasi_dpt, ev.target_dpt) }}%"/></div>
+                    </div>
+                </t>
+
+                <div class="sm-card">
+                    <div class="sm-card-title"><i class="fa fa-calculator"/> Rincian Anggaran</div>
+                    <t t-foreach="ev.anggaran" t-as="a" t-key="a_index">
+                        <div class="sm-line-row">
+                            <div class="sm-line-main">
+                                <div class="sm-line-title" t-esc="a.uraian"/>
+                                <div class="sm-line-sub"><t t-esc="this.fmtNum(a.qty)"/> <t t-esc="a.satuan"/> × <t t-esc="this.fmtRp(a.harga_satuan)"/></div>
+                            </div>
+                            <div class="sm-line-amount" t-esc="this.fmtRp(a.subtotal)"/>
+                        </div>
+                    </t>
+                    <div class="sm-line-total"><span>Total diajukan</span><b t-esc="this.fmtRp(ev.total_anggaran)"/></div>
+                    <t t-if="ev.dana_disetujui">
+                        <div class="sm-line-total sm-line-total--ok"><span>Dana disetujui</span><b t-esc="this.fmtRp(ev.dana_disetujui)"/></div>
+                    </t>
+                </div>
+
+                <t t-if="ev.ba_tanggal">
+                    <div class="sm-card">
+                        <div class="sm-card-title"><i class="fa fa-file-text-o"/> Berita Acara</div>
+                        <t t-if="ev.has_foto_kegiatan">
+                            <img class="sm-ba-foto" t-att-src="'/web/image/smartpolling.event/' + ev.id + '/ba_foto_kegiatan/800x0?u=' + ev.ba_tanggal"/>
+                        </t>
+                        <div class="sm-info-row"><span class="sm-info-label">Dikirim</span><span class="sm-info-value" t-esc="this.fmtDate(ev.ba_tanggal)"/></div>
+                        <div class="sm-info-row"><span class="sm-info-label">Peserta hadir</span><span class="sm-info-value"><t t-esc="ev.ba_jumlah_peserta"/> orang</span></div>
+                        <div class="sm-ev-desc" t-esc="ev.ba_ringkasan"/>
+                        <div class="sm-card-subtitle">Rincian penggunaan dana</div>
+                        <t t-foreach="ev.realisasi" t-as="r" t-key="r.id">
+                            <div class="sm-line-row">
+                                <t t-if="r.has_bukti">
+                                    <img class="sm-line-thumb" t-att-src="'/web/image/smartpolling.event.realisasi/' + r.id + '/bukti/120x120?u=' + ev.ba_tanggal"/>
+                                </t>
+                                <div class="sm-line-main"><div class="sm-line-title" t-esc="r.uraian"/></div>
+                                <div class="sm-line-amount" t-esc="this.fmtRp(r.jumlah)"/>
+                            </div>
+                        </t>
+                        <div class="sm-line-total"><span>Total realisasi</span><b t-esc="this.fmtRp(ev.total_realisasi)"/></div>
+                    </div>
+                </t>
+
+                <div class="sm-submit-bar sm-action-bar">
+                    <t t-if="ev.can_edit">
+                        <button class="sm-btn-secondary sm-btn-danger" t-on-click="() => this.askConfirm('Hapus draft event ini?', () => this.deleteEvent(ev.id))"><i class="fa fa-trash"/></button>
+                        <button class="sm-btn-secondary" t-on-click="() => this.openEventForm(ev)"><i class="fa fa-pencil"/> Edit</button>
+                        <button class="sm-btn-primary" t-on-click="() => this.askConfirm('Ajukan event ini ke admin pusat untuk pendanaan? Setelah diajukan, data tidak bisa diubah.', () => this.ajukanEvent(ev.id))">
+                            <i class="fa fa-paper-plane"/> Ajukan
+                        </button>
+                    </t>
+                    <t t-if="ev.can_survey">
+                        <button class="sm-btn-secondary" t-on-click="() => this.openSurveyAddFor(null, '', ev.id)"><i class="fa fa-plus"/> Survey</button>
+                    </t>
+                    <t t-if="ev.can_lapor">
+                        <button class="sm-btn-primary" t-on-click="openBaForm"><i class="fa fa-file-text-o"/> <t t-esc="ev.realisasi.length ? 'Perbaiki Berita Acara' : 'Isi Berita Acara'"/></button>
+                    </t>
+                </div>
+            </t>
+        </div>
+    </t>
+
+    <!-- ══ SUBPAGE: EVENT FORM (buat / edit draft) ══ -->
+    <t t-if="state.subpage === 'event-form'">
+        <div class="sm-page-body">
+            <t t-set="f" t-value="state.eventForm"/>
+            <div class="sm-card">
+                <div class="sm-card-title"><i class="fa fa-flag"/> Detail Event</div>
+                <div class="sm-field">
+                    <label class="sm-label">Nama Event <span class="sm-req">*</span></label>
+                    <input class="sm-input sm-input--plain" t-model="f.nama" placeholder="mis. Silaturahmi Warga RW 05"/>
+                </div>
+                <!-- Ditumpuk (bukan 2 kolom): datetime-local punya lebar minimum bawaan yang meluber di layar HP -->
+                <div class="sm-field">
+                    <label class="sm-label">Mulai <span class="sm-req">*</span></label>
+                    <input class="sm-input sm-input--plain" type="datetime-local" t-model="f.mulai"/>
+                </div>
+                <div class="sm-field">
+                    <label class="sm-label">Selesai <span class="sm-req">*</span></label>
+                    <input class="sm-input sm-input--plain" type="datetime-local" t-model="f.selesai"/>
+                </div>
+                <div class="sm-field">
+                    <label class="sm-label">Lokasi</label>
+                    <input class="sm-input sm-input--plain" t-model="f.lokasi" placeholder="Alamat / nama tempat"/>
+                </div>
+                <div class="sm-field">
+                    <label class="sm-label">Deskripsi &amp; Tujuan</label>
+                    <textarea class="sm-textarea" t-model="f.deskripsi" placeholder="Bentuk kegiatan, sasaran warga, strategi penggalangan suara..."/>
+                </div>
+                <div class="sm-field" style="margin-bottom:0;">
+                    <label class="sm-label">Target DPT Tersurvey <span class="sm-req">*</span></label>
+                    <input class="sm-input sm-input--plain" type="number" min="1" inputmode="numeric" t-model.number="f.target_dpt" placeholder="mis. 150"/>
+                    <div class="sm-hint">Jumlah DPT yang ditargetkan mengisi survey selama event.</div>
+                </div>
+            </div>
+
+            <div class="sm-card">
+                <div class="sm-card-title"><i class="fa fa-calculator"/> Rincian Anggaran <span class="sm-req">*</span></div>
+                <t t-foreach="f.anggaran" t-as="a" t-key="a_index">
+                    <div class="sm-line-edit">
+                        <div class="sm-line-edit-head">
+                            <span class="sm-line-no" t-esc="'#' + (a_index + 1)"/>
+                            <button class="sm-icon-btn" t-on-click="() => f.anggaran.splice(a_index, 1)"><i class="fa fa-times"/></button>
+                        </div>
+                        <input class="sm-input sm-input--plain" t-model="a.uraian" placeholder="Uraian (mis. Konsumsi peserta)"/>
+                        <div class="sm-row-3">
+                            <input class="sm-input sm-input--plain" type="number" min="0" step="any" inputmode="decimal" t-model.number="a.qty" placeholder="Jml"/>
+                            <input class="sm-input sm-input--plain" t-model="a.satuan" placeholder="Satuan"/>
+                            <input class="sm-input sm-input--plain" type="number" min="0" inputmode="numeric" t-model.number="a.harga_satuan" placeholder="Harga satuan"/>
+                        </div>
+                        <div class="sm-line-sub" style="text-align:right;">Subtotal: <b t-esc="this.fmtRp((a.qty || 0) * (a.harga_satuan || 0))"/></div>
+                    </div>
+                </t>
+                <button class="sm-btn-secondary sm-btn-block" t-on-click="() => f.anggaran.push(this._emptyAnggaranLine())"><i class="fa fa-plus"/> Tambah Baris</button>
+                <div class="sm-line-total"><span>Total anggaran</span><b t-esc="this.fmtRp(this.eventFormTotal)"/></div>
+            </div>
+
+            <div class="sm-submit-bar sm-action-bar">
+                <button class="sm-btn-secondary" t-on-click="() => this.saveEvent(false)" t-att-disabled="state.submitting"><i class="fa fa-save"/> Simpan Draft</button>
+                <button class="sm-btn-primary" t-on-click="() => this.askConfirm('Simpan dan ajukan event ini ke admin pusat? Setelah diajukan, data tidak bisa diubah.', () => this.saveEvent(true))" t-att-disabled="state.submitting">
+                    <t t-if="state.submitting"><span class="sm-spinner"/></t>
+                    <t t-else=""><i class="fa fa-paper-plane"/></t> Ajukan
+                </button>
+            </div>
+        </div>
+    </t>
+
+    <!-- ══ SUBPAGE: BERITA ACARA ══ -->
+    <t t-if="state.subpage === 'event-ba'">
+        <div class="sm-page-body">
+            <t t-set="b" t-value="state.baForm"/>
+            <div class="sm-card">
+                <div class="sm-card-title"><i class="fa fa-file-text-o"/> Pelaksanaan</div>
+                <div class="sm-field">
+                    <label class="sm-label">Ringkasan Pelaksanaan <span class="sm-req">*</span></label>
+                    <textarea class="sm-textarea" t-model="b.ringkasan" placeholder="Jalannya kegiatan, respon warga, kendala..."/>
+                </div>
+                <div class="sm-field">
+                    <label class="sm-label">Jumlah Peserta Hadir</label>
+                    <input class="sm-input sm-input--plain" type="number" min="0" inputmode="numeric" t-model.number="b.jumlah_peserta"/>
+                </div>
+                <label class="sm-label">Foto Kegiatan</label>
+                <t t-if="b.fotoPreview">
+                    <div class="sm-foto-preview"><img t-att-src="b.fotoPreview"/></div>
+                    <button class="sm-btn-secondary" style="margin-top:8px;" t-on-click="() => this.pickBaFoto(-1)"><i class="fa fa-camera"/> Ganti Foto</button>
+                </t>
+                <t t-else="">
+                    <div class="sm-foto-zone" t-on-click="() => this.pickBaFoto(-1)">
+                        <i class="fa fa-camera"/><div class="sm-foto-zone-text">Ketuk untuk ambil/pilih foto kegiatan</div>
+                    </div>
+                </t>
+            </div>
+
+            <div class="sm-card">
+                <div class="sm-card-title"><i class="fa fa-money"/> Rincian Penggunaan Dana <span class="sm-req">*</span></div>
+                <t t-foreach="b.realisasi" t-as="r" t-key="r.key">
+                    <div class="sm-line-edit">
+                        <div class="sm-line-edit-head">
+                            <span class="sm-line-no" t-esc="'#' + (r_index + 1)"/>
+                            <button class="sm-icon-btn" t-on-click="() => b.realisasi.splice(r_index, 1)"><i class="fa fa-times"/></button>
+                        </div>
+                        <input class="sm-input sm-input--plain" t-model="r.uraian" placeholder="Uraian (mis. Sewa tenda)"/>
+                        <div class="sm-line-edit-row">
+                            <input class="sm-input sm-input--plain" type="number" min="0" inputmode="numeric" t-model.number="r.jumlah" placeholder="Jumlah (Rp)"/>
+                            <button t-attf-class="sm-bukti-btn {{ r.buktiPreview ? 'sm-bukti-btn--ok' : '' }}" t-on-click="() => this.pickBaFoto(r_index)">
+                                <t t-if="r.buktiPreview"><img t-att-src="r.buktiPreview"/></t>
+                                <t t-else=""><i class="fa fa-camera"/> Nota</t>
+                            </button>
+                        </div>
+                    </div>
+                </t>
+                <button class="sm-btn-secondary sm-btn-block" t-on-click="addBaLine"><i class="fa fa-plus"/> Tambah Baris</button>
+                <div class="sm-line-total"><span>Dana disetujui</span><b t-esc="this.fmtRp(b.dana_disetujui)"/></div>
+                <div class="sm-line-total"><span>Total realisasi</span><b t-esc="this.fmtRp(this.baTotal)"/></div>
+                <div t-attf-class="sm-line-total {{ b.dana_disetujui - this.baTotal &lt; 0 ? 'sm-line-total--over' : 'sm-line-total--ok' }}">
+                    <span t-esc="b.dana_disetujui - this.baTotal &lt; 0 ? 'Lebih bayar' : 'Sisa dana'"/>
+                    <b t-esc="this.fmtRp(Math.abs(b.dana_disetujui - this.baTotal))"/>
+                </div>
+            </div>
+            <input type="file" accept="image/*" capture="environment" style="display:none;" t-ref="baFotoInput" t-on-change="onBaFotoChange"/>
+
+            <div class="sm-submit-bar">
+                <button class="sm-btn-primary sm-btn-block" t-on-click="() => this.askConfirm('Kirim berita acara ke admin pusat? Setelah dikirim, data hanya bisa diubah bila dikembalikan admin.', () => this.submitBa())" t-att-disabled="state.submitting">
+                    <t t-if="state.submitting"><span class="sm-spinner"/><span>Mengirim...</span></t>
+                    <t t-else=""><i class="fa fa-paper-plane"/><span>Kirim Berita Acara</span></t>
+                </button>
+            </div>
+        </div>
+    </t>
+
     <!-- Bottom Navigation -->
     <nav class="sm-bottom-nav">
         <button t-attf-class="sm-nav-item {{ state.tab === 'home' ? 'active' : '' }}" t-on-click="() => this.switchTab('home')">
@@ -761,9 +1126,9 @@
             <div class="sm-nav-icon-wrap"><i class="fa fa-comments"/></div>
             <span>Survey</span>
         </button>
-        <button t-attf-class="sm-nav-item {{ state.tab === 'info' ? 'active' : '' }}" t-on-click="() => this.switchTab('info')">
-            <div class="sm-nav-icon-wrap"><i class="fa fa-newspaper-o"/></div>
-            <span>Info</span>
+        <button t-attf-class="sm-nav-item {{ state.tab === 'event' ? 'active' : '' }}" t-on-click="() => this.switchTab('event')">
+            <div class="sm-nav-icon-wrap"><i class="fa fa-flag"/></div>
+            <span>Event</span>
         </button>
         <button t-attf-class="sm-nav-item {{ state.tab === 'profil' ? 'active' : '' }}" t-on-click="() => this.switchTab('profil')">
             <div class="sm-nav-icon-wrap"><i class="fa fa-user-circle"/></div>
@@ -776,6 +1141,20 @@
         <i t-attf-class="fa {{ state.toast.type === 'success' ? 'fa-check' : state.toast.type === 'error' ? 'fa-times' : 'fa-info-circle' }}"/>
         <span t-esc="state.toast.text"/>
     </div>
+
+    <!-- Generic Confirm Dialog -->
+    <t t-if="state.confirm">
+        <div class="sm-confirm-overlay" t-on-click="onConfirmOverlayClick">
+            <div class="sm-confirm-box">
+                <div class="sm-confirm-icon"><i class="fa fa-question-circle"/></div>
+                <div class="sm-confirm-msg" t-esc="state.confirm.msg"/>
+                <div class="sm-confirm-actions">
+                    <button class="sm-btn-secondary" t-on-click="() => this.state.confirm = null">Batal</button>
+                    <button class="sm-btn-primary" t-on-click="runConfirm">Ya, Lanjutkan</button>
+                </div>
+            </div>
+        </div>
+    </t>
 
     <!-- Confirm Logout Dialog -->
     <t t-if="state.confirmLogout">
@@ -797,6 +1176,9 @@
             this.initData = JSON.parse(document.getElementById('sm-app-root').dataset.init || '{}');
             this.mapRef = useRef('gpsMap');
             this.photoInputRef = useRef('photoInput');
+            this.baFotoInputRef = useRef('baFotoInput');
+            this._baFotoTarget = -1;   // -1 = foto kegiatan, >=0 = index baris realisasi
+            this._lineKey = 0;
             this.surveyFotoInputRef = useRef('surveyFotoInput');
             this.weeklyChartRef = useRef('weeklyChart');
             this._map = null;
@@ -837,6 +1219,17 @@
                 beritaDetail: null,
                 agendaDetail: null,
 
+                // Subpage bertumpuk: kembali (←) membuka subpage sebelumnya
+                subpageStack: [],
+
+                // Event
+                eventList: [], eventTotal: 0, eventGroup: null, eventLoading: false,
+                eventDetail: null,
+                eventForm: null,
+                baForm: null,
+                activeEvents: [],
+
+                confirm: null,          // { msg, onOk }
                 confirmLogout: false,
             });
 
@@ -878,7 +1271,10 @@
             };
         }
         _emptySurveyForm() {
-            return { dpt_id: null, dpt_name: '', pilihan: '', fotoBase64: null, fotoPreview: null };
+            return { dpt_id: null, dpt_name: '', pilihan: '', fotoBase64: null, fotoPreview: null, event_id: '' };
+        }
+        _emptyAnggaranLine() {
+            return { uraian: '', qty: 1, satuan: '', harga_satuan: null };
         }
 
         // ── Getters / helpers dipakai di template ─────────────────────────
@@ -894,7 +1290,70 @@
                 'survey-add': 'Tambah Survey',
                 'berita-detail': 'Berita',
                 'agenda-detail': 'Detail Agenda',
+                'info': 'Berita & Agenda',
+                'event-detail': 'Detail Event',
+                'event-form': this.state.eventForm && this.state.eventForm.id ? 'Edit Event' : 'Ajukan Event',
+                'event-ba': 'Berita Acara',
             }[this.state.subpage] || '';
+        }
+        get eventGroups() {
+            return [
+                { key: null, label: 'Semua' },
+                { key: 'proses', label: 'Pengajuan' },
+                { key: 'berjalan', label: 'Disetujui' },
+                { key: 'selesai', label: 'Selesai' },
+                { key: 'ditolak', label: 'Ditolak' },
+            ];
+        }
+        get eventFormTotal() {
+            const f = this.state.eventForm;
+            return f ? f.anggaran.reduce((s, a) => s + (Number(a.qty) || 0) * (Number(a.harga_satuan) || 0), 0) : 0;
+        }
+        get baTotal() {
+            const b = this.state.baForm;
+            return b ? b.realisasi.reduce((s, r) => s + (Number(r.jumlah) || 0), 0) : 0;
+        }
+        eventStateLabel(v) { return EVENT_STATE_LABELS[v] || v; }
+        // Catatan: jangan pakai global seperti String()/Number() langsung di template Owl —
+        // Owl membacanya sebagai variabel context (undefined) dan seluruh app crash.
+        isSurveyEvent(id) { return String(id) === String(this.state.surveyForm.event_id || ''); }
+        fmtRp(v) { return RP.format(Number(v) || 0); }
+        fmtNum(v) { return NUM.format(Number(v) || 0); }
+        pct(a, b) { return b ? Math.min(100, Math.round((a || 0) / b * 100)) : 0; }
+        cmpWidth(row, rows) {
+            const max = Math.max(1, ...rows.map((r) => Number(r.value) || 0));
+            return Math.round((Number(row.value) || 0) / max * 100);
+        }
+        eventHint(ev) {
+            switch (ev.state) {
+                case 'draft':
+                    return { type: 'warning', icon: 'fa-pencil', text: ev.catatan_admin
+                        ? 'Admin meminta revisi. Perbaiki pengajuan lalu ajukan ulang.'
+                        : 'Draft belum diajukan. Lengkapi rincian anggaran lalu ketuk Ajukan.' };
+                case 'diajukan':
+                    return { type: 'warning', icon: 'fa-hourglass-half', text: 'Menunggu persetujuan pendanaan dari admin pusat.' };
+                case 'ditolak':
+                    return { type: 'error', icon: 'fa-ban', text: 'Pengajuan event ini ditolak admin pusat.' };
+                case 'disetujui':
+                    return ev.can_lapor
+                        ? { type: 'success', icon: 'fa-check-circle', text: 'Event disetujui & didanai. Tandai survey selama event, lalu isi berita acara setelah selesai.' }
+                        : { type: 'success', icon: 'fa-check-circle', text: 'Event disetujui & didanai. Berita acara bisa diisi setelah event dimulai.' };
+                case 'laporan':
+                    return { type: 'warning', icon: 'fa-hourglass-half', text: 'Berita acara terkirim, menunggu verifikasi admin pusat.' };
+                default:
+                    return { type: 'success', icon: 'fa-flag-checkered', text: 'Event selesai dan telah diverifikasi admin pusat.' };
+            }
+        }
+
+        // ── Konfirmasi generik ─────────────────────────────────────────────
+        askConfirm(msg, onOk) { this.state.confirm = { msg, onOk }; }
+        runConfirm() {
+            const c = this.state.confirm;
+            this.state.confirm = null;
+            if (c && c.onOk) c.onOk();
+        }
+        onConfirmOverlayClick(e) {
+            if (e.target === e.currentTarget) this.state.confirm = null;
         }
         get kpiCards() {
             const k = this.state.kpi || {};
@@ -929,25 +1388,40 @@
         // ── Navigasi ───────────────────────────────────────────────────────
         switchTab(tab) {
             this.state.tab = tab;
-            this.state.subpage = null;
+            this.resetSubpages();
             if (tab === 'home') {
                 this._loadKpi();
                 this._loadWeeklyChart();
                 this._loadInfoHome();
             }
-            if (tab === 'info') {
-                // selalu refresh supaya berita/agenda baru dari admin langsung terlihat
-                if (this.state.infoTab === 'berita') this._loadBeritaList(true);
-                else this._loadAgendaList(true);
-            }
+            if (tab === 'event') this._loadEventList(true);
             if (tab === 'dpt' && !this.state.dptList.length) this._loadDptList(true);
             if (tab === 'survey' && !this.state.surveyList.length) this._loadSurveyList(true);
         }
+        // Buka subpage di atas subpage saat ini (kalau ada) — tombol kembali akan balik ke sana
+        pushSubpage(name) {
+            if (this.state.subpage && this.state.subpage !== name) this.state.subpageStack.push(this.state.subpage);
+            this.state.subpage = name;
+        }
+        // Tutup subpage tanpa reload (dipakai saat gagal memuat)
+        popSubpage() {
+            this.state.subpage = this.state.subpageStack.pop() || null;
+        }
+        resetSubpages() {
+            this.state.subpageStack = [];
+            this.state.subpage = null;
+        }
         closeSubpage() {
             const wasSubpage = this.state.subpage;
-            this.state.subpage = null;
-            if (wasSubpage === 'dpt-detail' || wasSubpage === 'dpt-add') this._loadDptList(true);
-            if (wasSubpage === 'survey-add') this._loadSurveyList(true);
+            this.popSubpage();
+            const now = this.state.subpage;
+            if (now === 'event-detail' && this.state.eventDetail) {
+                this._reloadEventDetail();
+            } else if (!now) {
+                if (wasSubpage === 'dpt-detail' || wasSubpage === 'dpt-add') this._loadDptList(true);
+                if (wasSubpage === 'survey-add') this._loadSurveyList(true);
+                if (this.state.tab === 'event' && wasSubpage && wasSubpage.startsWith('event')) this._loadEventList(true);
+            }
         }
         onKpiClick(key) {
             if (key === 'belum') {
@@ -1060,16 +1534,16 @@
         // ── DPT detail ─────────────────────────────────────────────────────
         async openDptDetail(id) {
             if (!id) return;
-            this.state.subpage = 'dpt-detail';
+            this.pushSubpage('dpt-detail');
             this.state.dptDetail = null;
             this.state.dptDetailLoading = true;
             try {
                 const res = await rpc('/mobile/api/dpt/record', { dpt_id: id });
-                if (res.error) { this.toast('Gagal memuat detail DPT', 'error'); this.state.subpage = null; return; }
+                if (res.error) { this.toast('Gagal memuat detail DPT', 'error'); this.popSubpage(); return; }
                 this.state.dptDetail = res;
             } catch (e) {
                 this.toast('Gagal memuat detail DPT', 'error');
-                this.state.subpage = null;
+                this.popSubpage();
             } finally {
                 this.state.dptDetailLoading = false;
             }
@@ -1078,7 +1552,7 @@
         openDptAdd() {
             this.state.dptForm = this._emptyDptForm();
             this.state.gpsAccuracy = null;
-            this.state.subpage = 'dpt-add';
+            this.pushSubpage('dpt-add');
         }
         async _loadTpsOptions() {
             try {
@@ -1150,7 +1624,7 @@
                 const res = await rpc('/mobile/api/dpt/create', { data: f });
                 if (res.error) return this.toast(res.error, 'error');
                 this.toast('DPT berhasil ditambahkan', 'success');
-                this.state.subpage = null;
+                this.resetSubpages();
                 this.state.tab = 'dpt';
                 this._loadDptList(true);
                 this._loadKpi();
@@ -1183,13 +1657,24 @@
         loadMoreSurvey() { this._loadSurveyList(false); }
 
         // ── Survey add ─────────────────────────────────────────────────────
-        openSurveyAddFor(dptId, dptName) {
-            this.state.surveyForm = dptId
-                ? { dpt_id: dptId, dpt_name: dptName, pilihan: '', fotoBase64: null, fotoPreview: null }
-                : this._emptySurveyForm();
+        openSurveyAddFor(dptId, dptName, eventId) {
+            this.state.surveyForm = Object.assign(this._emptySurveyForm(),
+                dptId ? { dpt_id: dptId, dpt_name: dptName } : {},
+                eventId ? { event_id: String(eventId) } : {});
             this.state.dptPickSearch = '';
             this.state.dptPickResults = [];
-            this.state.subpage = 'survey-add';
+            this.pushSubpage('survey-add');
+            this._loadActiveEvents(eventId);
+        }
+        async _loadActiveEvents(presetId) {
+            try {
+                const res = await rpc('/mobile/api/event/active', {});
+                this.state.activeEvents = res.records || [];
+                // Kalau hanya ada 1 event aktif & tidak dipilih eksplisit, pilih otomatis (masih bisa diganti)
+                if (!presetId && this.state.activeEvents.length === 1 && !this.state.surveyForm.event_id) {
+                    this.state.surveyForm.event_id = String(this.state.activeEvents[0].id);
+                }
+            } catch (e) { this.state.activeEvents = []; }
         }
         onDptPickSearchKey() {
             clearTimeout(this._pickTimer);
@@ -1234,13 +1719,23 @@
             try {
                 const res = await rpc('/mobile/api/survey/create', {
                     dpt_id: f.dpt_id, pilihan: f.pilihan, foto: f.fotoBase64 || null,
+                    event_id: f.event_id ? Number(f.event_id) : null,
                 });
                 if (res.error) return this.toast(res.error, 'error');
+                this._loadKpi();
+                this.state.surveyList = [];   // dimuat ulang saat tab Survey dibuka
+                if (f.event_id) {
+                    // Survey event: form tetap terbuka untuk DPT berikutnya, event tetap terpilih
+                    this.toast('Survey event tersimpan. Lanjut DPT berikutnya.', 'success');
+                    this.state.surveyForm = Object.assign(this._emptySurveyForm(), { event_id: f.event_id });
+                    this.state.dptPickSearch = '';
+                    this.state.dptPickResults = [];
+                    return;
+                }
                 this.toast('Survey berhasil disimpan', 'success');
-                this.state.subpage = null;
+                this.resetSubpages();
                 this.state.tab = 'survey';
                 this._loadSurveyList(true);
-                this._loadKpi();
             } catch (e) {
                 this.toast('Gagal menyimpan survey', 'error');
             } finally {
@@ -1257,7 +1752,11 @@
         }
         openInfo(which) {
             this.state.infoTab = which;
-            this.switchTab('info');
+            this.resetSubpages();
+            this.pushSubpage('info');
+            // selalu refresh supaya berita/agenda baru dari admin langsung terlihat
+            if (which === 'berita') this._loadBeritaList(true);
+            else this._loadAgendaList(true);
         }
         switchInfoTab(which) {
             if (this.state.infoTab === which) return;
@@ -1314,26 +1813,231 @@
         }
         async openBeritaDetail(id) {
             this.state.beritaDetail = null;
-            this.state.subpage = 'berita-detail';
+            this.pushSubpage('berita-detail');
             try {
                 const res = await rpc('/mobile/api/berita/record', { berita_id: id });
                 if (res.error) throw new Error(res.error);
                 this.state.beritaDetail = res;
             } catch (e) {
                 this.toast('Berita tidak ditemukan', 'error');
-                this.state.subpage = null;
+                this.popSubpage();
             }
         }
         async openAgendaDetail(id) {
             this.state.agendaDetail = null;
-            this.state.subpage = 'agenda-detail';
+            this.pushSubpage('agenda-detail');
             try {
                 const res = await rpc('/mobile/api/agenda/record', { agenda_id: id });
                 if (res.error) throw new Error(res.error);
                 this.state.agendaDetail = res;
             } catch (e) {
                 this.toast('Agenda tidak ditemukan', 'error');
-                this.state.subpage = null;
+                this.popSubpage();
+            }
+        }
+
+        // ── Event ──────────────────────────────────────────────────────────
+        openEventTab(group) {
+            this.state.eventGroup = group || null;
+            this.switchTab('event');
+        }
+        filterEventGroup(group) {
+            this.state.eventGroup = group;
+            this._loadEventList(true);
+        }
+        async _loadEventList(reset) {
+            if (this.state.eventLoading) return;
+            this.state.eventLoading = true;
+            if (reset) this.state.eventList = [];
+            try {
+                const res = await rpc('/mobile/api/event/list', {
+                    group: this.state.eventGroup,
+                    offset: reset ? 0 : this.state.eventList.length,
+                    limit: 20,
+                });
+                if (res.error) { this.toast(res.error, 'error'); return; }
+                this.state.eventList = reset ? res.records : this.state.eventList.concat(res.records);
+                this.state.eventTotal = res.total;
+            } catch (e) {
+                this.toast('Gagal memuat event', 'error');
+            } finally {
+                this.state.eventLoading = false;
+            }
+        }
+        async openEventDetail(id) {
+            this.state.eventDetail = null;
+            this.pushSubpage('event-detail');
+            if (!(await this._fetchEventDetail(id))) this.popSubpage();
+        }
+        async _fetchEventDetail(id) {
+            try {
+                const res = await rpc('/mobile/api/event/record', { event_id: id });
+                if (res.error) throw new Error(res.error);
+                this.state.eventDetail = res;
+                return true;
+            } catch (e) {
+                this.toast('Event tidak ditemukan', 'error');
+                return false;
+            }
+        }
+        _reloadEventDetail() {
+            if (this.state.eventDetail) this._fetchEventDetail(this.state.eventDetail.id);
+        }
+        openEventForm(ev) {
+            const now = new Date();
+            const besok = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0);
+            const toLocal = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+            this.state.eventForm = ev ? {
+                id: ev.id,
+                nama: ev.nama,
+                mulai: utcToLocalInput(ev.mulai),
+                selesai: utcToLocalInput(ev.selesai),
+                lokasi: ev.lokasi,
+                deskripsi: ev.deskripsi,
+                target_dpt: ev.target_dpt || null,
+                anggaran: ev.anggaran.map((a) => ({ uraian: a.uraian, qty: a.qty, satuan: a.satuan, harga_satuan: a.harga_satuan })),
+            } : {
+                id: null, nama: '', lokasi: '', deskripsi: '', target_dpt: null,
+                mulai: toLocal(besok),
+                selesai: toLocal(new Date(besok.getTime() + 3 * 3600 * 1000)),
+                anggaran: [this._emptyAnggaranLine()],
+            };
+            this.pushSubpage('event-form');
+        }
+        async saveEvent(ajukan) {
+            const f = this.state.eventForm;
+            if (!f.nama.trim()) return this.toast('Nama event wajib diisi', 'error');
+            const mulai = localInputToUtc(f.mulai), selesai = localInputToUtc(f.selesai);
+            if (!mulai || !selesai) return this.toast('Isi waktu mulai dan selesai', 'error');
+            if (selesai < mulai) return this.toast('Waktu selesai sebelum waktu mulai', 'error');
+            const anggaran = f.anggaran.filter((a) => (a.uraian || '').trim() || a.harga_satuan);
+            if (anggaran.some((a) => !(a.uraian || '').trim())) return this.toast('Uraian anggaran wajib diisi', 'error');
+            if (ajukan) {
+                if (!(f.target_dpt > 0)) return this.toast('Isi target DPT tersurvey', 'error');
+                if (!anggaran.length || !(this.eventFormTotal > 0)) return this.toast('Isi rincian anggaran', 'error');
+            }
+            this.state.submitting = true;
+            try {
+                const res = await rpc('/mobile/api/event/save', {
+                    event_id: f.id,
+                    ajukan: !!ajukan,
+                    data: {
+                        nama: f.nama, mulai, selesai, lokasi: f.lokasi, deskripsi: f.deskripsi,
+                        target_dpt: f.target_dpt || 0,
+                        anggaran: anggaran.map((a) => ({
+                            uraian: a.uraian, qty: a.qty || 0, satuan: a.satuan, harga_satuan: a.harga_satuan || 0,
+                        })),
+                    },
+                });
+                if (res.error) return this.toast(res.error, 'error');
+                this.toast(ajukan ? 'Event diajukan ke admin pusat' : 'Draft event tersimpan', 'success');
+                // Form diganti dengan halaman detail event
+                this.popSubpage();
+                if (this.state.subpage === 'event-detail') {
+                    await this._fetchEventDetail(res.id);
+                } else {
+                    await this.openEventDetail(res.id);
+                }
+            } catch (e) {
+                this.toast('Gagal menyimpan event', 'error');
+            } finally {
+                this.state.submitting = false;
+            }
+        }
+        async ajukanEvent(id) {
+            try {
+                const res = await rpc('/mobile/api/event/ajukan', { event_id: id });
+                if (res.error) return this.toast(res.error, 'error');
+                this.toast('Event diajukan ke admin pusat', 'success');
+                this._fetchEventDetail(id);
+            } catch (e) { this.toast('Gagal mengajukan event', 'error'); }
+        }
+        async deleteEvent(id) {
+            try {
+                const res = await rpc('/mobile/api/event/delete', { event_id: id });
+                if (res.error) return this.toast(res.error, 'error');
+                this.toast('Draft event dihapus', 'success');
+                this.closeSubpage();
+                if (this.state.tab !== 'event') this.switchTab('event');
+            } catch (e) { this.toast('Gagal menghapus event', 'error'); }
+        }
+
+        // ── Berita acara ───────────────────────────────────────────────────
+        openBaForm() {
+            const ev = this.state.eventDetail;
+            const stamp = encodeURIComponent(ev.ba_tanggal || '');
+            this.state.baForm = {
+                event_id: ev.id,
+                dana_disetujui: ev.dana_disetujui,
+                ringkasan: ev.ba_ringkasan,
+                jumlah_peserta: ev.ba_jumlah_peserta || null,
+                fotoPreview: ev.has_foto_kegiatan ? `/web/image/smartpolling.event/${ev.id}/ba_foto_kegiatan/800x0?u=${stamp}` : null,
+                fotoBase64: null,
+                realisasi: ev.realisasi.length
+                    ? ev.realisasi.map((r) => ({
+                        key: ++this._lineKey, id: r.id, uraian: r.uraian, jumlah: r.jumlah, buktiBase64: null,
+                        buktiPreview: r.has_bukti ? `/web/image/smartpolling.event.realisasi/${r.id}/bukti/120x120?u=${stamp}` : null,
+                    }))
+                    // Prefill dari rincian anggaran supaya PIC tinggal menyesuaikan angka realisasi
+                    : ev.anggaran.map((a) => ({
+                        key: ++this._lineKey, id: null, uraian: a.uraian, jumlah: a.subtotal, buktiBase64: null, buktiPreview: null,
+                    })),
+            };
+            this.pushSubpage('event-ba');
+        }
+        addBaLine() {
+            this.state.baForm.realisasi.push({
+                key: ++this._lineKey, id: null, uraian: '', jumlah: null, buktiBase64: null, buktiPreview: null,
+            });
+        }
+        pickBaFoto(index) {
+            this._baFotoTarget = index;
+            const el = this.baFotoInputRef.el;
+            if (el) { el.value = ''; el.click(); }
+        }
+        async onBaFotoChange(ev) {
+            const file = ev.target.files[0];
+            if (!file) return;
+            try {
+                const dataUrl = await compressImage(file);
+                const b64 = dataUrl.split(',')[1];
+                const b = this.state.baForm;
+                if (this._baFotoTarget < 0) {
+                    b.fotoPreview = dataUrl;
+                    b.fotoBase64 = b64;
+                } else if (b.realisasi[this._baFotoTarget]) {
+                    b.realisasi[this._baFotoTarget].buktiPreview = dataUrl;
+                    b.realisasi[this._baFotoTarget].buktiBase64 = b64;
+                }
+            } catch (e) {
+                this.toast('Gagal memproses foto', 'error');
+            }
+        }
+        async submitBa() {
+            const b = this.state.baForm;
+            if (!(b.ringkasan || '').trim()) return this.toast('Ringkasan pelaksanaan wajib diisi', 'error');
+            const lines = b.realisasi.filter((r) => (r.uraian || '').trim() || r.jumlah);
+            if (!lines.length) return this.toast('Isi minimal 1 rincian penggunaan dana', 'error');
+            if (lines.some((r) => !(r.uraian || '').trim())) return this.toast('Uraian penggunaan dana wajib diisi', 'error');
+            this.state.submitting = true;
+            try {
+                const res = await rpc('/mobile/api/event/laporan', {
+                    event_id: b.event_id,
+                    data: {
+                        ringkasan: b.ringkasan,
+                        jumlah_peserta: b.jumlah_peserta || 0,
+                        foto_kegiatan: b.fotoBase64,
+                        realisasi: lines.map((r) => ({ id: r.id, uraian: r.uraian, jumlah: r.jumlah || 0, bukti: r.buktiBase64 })),
+                    },
+                });
+                if (res.error) return this.toast(res.error, 'error');
+                this.toast('Berita acara terkirim ke admin pusat', 'success');
+                this.closeSubpage();   // kembali ke detail event (otomatis dimuat ulang)
+                this._loadKpi();
+            } catch (e) {
+                this.toast('Gagal mengirim berita acara', 'error');
+            } finally {
+                this.state.submitting = false;
             }
         }
 

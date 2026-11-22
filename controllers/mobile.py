@@ -4,7 +4,9 @@ import logging
 import re
 from datetime import datetime, timedelta
 
-from odoo import http
+from odoo import fields, http
+from odoo.exceptions import UserError, ValidationError
+from odoo.fields import Command
 from odoo.http import request
 
 _logger = logging.getLogger(__name__)
@@ -145,12 +147,19 @@ class SmartPollingMobileController(http.Controller):
             'pilihan': r['pilihan'],
         } for r in recent]
 
+        Event = request.env['smartpolling.event'].sudo()
+        event_perlu_laporan = Event.search_count([
+            ('pic_id', '=', user.relawan_id.id), ('state', '=', 'disetujui'),
+            ('tanggal_selesai', '<', datetime.utcnow()),
+        ])
+
         return {
             'total_dpt': total_dpt,
             'total_terverifikasi': total_terverifikasi,
             'total_belum_survey': total_belum_survey,
             'total_tps': total_tps,
             'recent': recent_list,
+            'event_perlu_laporan': event_perlu_laporan,
         }
 
     @http.route('/mobile/api/weekly', type='jsonrpc', auth='public', csrf=False)
@@ -367,7 +376,7 @@ class SmartPollingMobileController(http.Controller):
         }
 
     @http.route('/mobile/api/survey/create', type='jsonrpc', auth='public', csrf=False)
-    def api_survey_create(self, dpt_id=None, pilihan=None, foto=None, **kwargs):
+    def api_survey_create(self, dpt_id=None, pilihan=None, foto=None, event_id=None, **kwargs):
         user = self._auth_check()
         if not user:
             return {'error': 'unauthorized'}
@@ -378,6 +387,11 @@ class SmartPollingMobileController(http.Controller):
             return {'error': 'DPT tidak ditemukan atau bukan cakupan Anda.'}
 
         vals = {'dpt_id': rec.id, 'pilihan': pilihan}
+        if event_id:
+            event = self._event_active(user).filtered(lambda e: e.id == int(event_id))
+            if not event:
+                return {'error': 'Event tidak aktif atau bukan milik Anda.'}
+            vals['event_id'] = event.id
         if foto:
             if len(foto) > 900_000 or not _is_valid_image(foto):
                 return {'error': 'Foto tidak valid atau terlalu besar.'}
@@ -511,3 +525,287 @@ class SmartPollingMobileController(http.Controller):
         if not rec:
             return {'error': 'not_found'}
         return self._agenda_dict(rec, with_detail=True)
+
+    # ─────────────────────────────────────────────────────────────
+    # API: EVENT (pengajuan → persetujuan admin → berita acara → evaluasi)
+    # Semua perubahan lewat sini (sudo) dengan validasi PIC & status;
+    # transisi status memakai method model (action_ajukan, action_kirim_laporan).
+    # ─────────────────────────────────────────────────────────────
+    _EVENT_GROUPS = {
+        'proses': ('draft', 'diajukan'),
+        'berjalan': ('disetujui',),
+        'selesai': ('laporan', 'selesai'),
+        'ditolak': ('ditolak',),
+    }
+    _MAX_LINES = 30
+
+    @staticmethod
+    def _dt_str(dt):
+        return dt.strftime('%Y-%m-%d %H:%M:%S') if dt else None
+
+    @staticmethod
+    def _parse_dt(value):
+        try:
+            return fields.Datetime.to_datetime(value) if value else None
+        except (ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def _to_float(value):
+        try:
+            v = float(value or 0)
+        except (TypeError, ValueError):
+            return None
+        return v if v >= 0 else None
+
+    def _event_mine(self, user, event_id, states=None):
+        domain = [('id', '=', int(event_id or 0)), ('pic_id', '=', user.relawan_id.id)]
+        if states:
+            domain.append(('state', 'in', states))
+        return request.env['smartpolling.event'].sudo().search(domain, limit=1)
+
+    def _event_active(self, user):
+        """Event milik PIC yang sedang berlangsung → boleh dipakai menandai survey.
+        Toleransi 1 hari setelah selesai untuk input survey yang terlambat."""
+        now = datetime.utcnow()
+        return request.env['smartpolling.event'].sudo().search([
+            ('pic_id', '=', user.relawan_id.id),
+            ('state', '=', 'disetujui'),
+            ('tanggal_mulai', '<=', now),
+            ('tanggal_selesai', '>=', now - timedelta(days=1)),
+        ], order='tanggal_mulai asc')
+
+    def _event_summary(self, rec):
+        return {
+            'id': rec.id,
+            'code': rec.code,
+            'nama': rec.name,
+            'state': rec.state,
+            'mulai': self._dt_str(rec.tanggal_mulai),
+            'selesai': self._dt_str(rec.tanggal_selesai),
+            'lokasi': rec.lokasi or '',
+            'target_dpt': rec.target_dpt,
+            'realisasi_dpt': rec.realisasi_dpt,
+            'realisasi_memilih': rec.realisasi_memilih,
+            'total_anggaran': rec.total_anggaran,
+            'dana_disetujui': rec.dana_disetujui,
+            'total_realisasi': rec.total_realisasi,
+        }
+
+    def _event_detail(self, rec, user):
+        now = datetime.utcnow()
+        data = self._event_summary(rec)
+        data.update({
+            'deskripsi': rec.deskripsi or '',
+            'catatan_admin': rec.catatan_admin or '',
+            'tanggal_diajukan': self._dt_str(rec.tanggal_diajukan),
+            'tanggal_disetujui': self._dt_str(rec.tanggal_disetujui),
+            'anggaran': [{
+                'uraian': a.uraian, 'qty': a.qty, 'satuan': a.satuan or '',
+                'harga_satuan': a.harga_satuan, 'subtotal': a.subtotal,
+            } for a in rec.anggaran_ids],
+            'ba_ringkasan': rec.ba_ringkasan or '',
+            'ba_jumlah_peserta': rec.ba_jumlah_peserta,
+            'ba_tanggal': self._dt_str(rec.ba_tanggal),
+            'has_foto_kegiatan': bool(rec.ba_foto_kegiatan),
+            'realisasi': [{
+                'id': r.id, 'uraian': r.uraian, 'jumlah': r.jumlah, 'has_bukti': bool(r.bukti),
+            } for r in rec.realisasi_ids],
+            'selisih_dana': rec.selisih_dana,
+            'persen_serapan': round(rec.persen_serapan, 1),
+            'persen_target': round(rec.persen_target, 1),
+            'persen_memilih': round(rec.persen_memilih, 1),
+            'biaya_per_suara': rec.biaya_per_suara,
+            'can_edit': rec.state == 'draft',
+            'can_lapor': rec.state == 'disetujui' and now >= rec.tanggal_mulai,
+            'can_survey': rec in self._event_active(user),
+        })
+        return data
+
+    @http.route('/mobile/api/event/list', type='jsonrpc', auth='public', csrf=False)
+    def api_event_list(self, group=None, offset=0, limit=20, **kwargs):
+        user = self._auth_check()
+        if not user:
+            return {'error': 'unauthorized'}
+        Event = request.env['smartpolling.event'].sudo()
+        domain = [('pic_id', '=', user.relawan_id.id)]
+        if group in self._EVENT_GROUPS:
+            domain.append(('state', 'in', self._EVENT_GROUPS[group]))
+        total = Event.search_count(domain)
+        records = Event.search(domain, offset=int(offset or 0), limit=min(int(limit or 20), 50))
+        return {'total': total, 'records': [self._event_summary(e) for e in records]}
+
+    @http.route('/mobile/api/event/record', type='jsonrpc', auth='public', csrf=False)
+    def api_event_record(self, event_id=None, **kwargs):
+        user = self._auth_check()
+        if not user:
+            return {'error': 'unauthorized'}
+        rec = self._event_mine(user, event_id)
+        if not rec:
+            return {'error': 'not_found'}
+        return self._event_detail(rec.with_context(bin_size=True), user)
+
+    @http.route('/mobile/api/event/active', type='jsonrpc', auth='public', csrf=False)
+    def api_event_active(self, **kwargs):
+        user = self._auth_check()
+        if not user:
+            return {'error': 'unauthorized'}
+        return {'records': [{'id': e.id, 'nama': e.name} for e in self._event_active(user)]}
+
+    def _validate_event_data(self, data):
+        nama = (data.get('nama') or '').strip()
+        if not nama:
+            return 'Nama event wajib diisi.', None
+        mulai, selesai = self._parse_dt(data.get('mulai')), self._parse_dt(data.get('selesai'))
+        if not mulai or not selesai:
+            return 'Waktu mulai dan selesai wajib diisi.', None
+        if selesai < mulai:
+            return 'Waktu selesai tidak boleh lebih awal dari waktu mulai.', None
+        try:
+            target = int(data.get('target_dpt') or 0)
+        except (TypeError, ValueError):
+            return 'Target DPT harus berupa angka.', None
+        if target < 0:
+            return 'Target DPT tidak boleh negatif.', None
+        lines = data.get('anggaran') or []
+        if len(lines) > self._MAX_LINES:
+            return f'Rincian anggaran maksimal {self._MAX_LINES} baris.', None
+        cmds = [Command.clear()]
+        for i, line in enumerate(lines, 1):
+            uraian = (line.get('uraian') or '').strip()
+            qty, harga = self._to_float(line.get('qty')), self._to_float(line.get('harga_satuan'))
+            if not uraian:
+                return f'Uraian anggaran baris {i} wajib diisi.', None
+            if qty is None or harga is None:
+                return f'Jumlah/harga anggaran baris {i} tidak valid.', None
+            cmds.append(Command.create({
+                'sequence': i, 'uraian': uraian[:200], 'qty': qty,
+                'satuan': (line.get('satuan') or '').strip()[:50], 'harga_satuan': harga,
+            }))
+        return None, {
+            'name': nama[:200],
+            'tanggal_mulai': mulai,
+            'tanggal_selesai': selesai,
+            'lokasi': (data.get('lokasi') or '').strip()[:200],
+            'deskripsi': (data.get('deskripsi') or '').strip()[:5000],
+            'target_dpt': target,
+            'anggaran_ids': cmds,
+        }
+
+    @http.route('/mobile/api/event/save', type='jsonrpc', auth='public', csrf=False)
+    def api_event_save(self, event_id=None, data=None, ajukan=False, **kwargs):
+        """Buat/ubah event draft; ajukan=True langsung mengajukan ke admin pusat."""
+        user = self._auth_check()
+        if not user:
+            return {'error': 'unauthorized'}
+        err, vals = self._validate_event_data(data or {})
+        if err:
+            return {'error': err}
+        rec = None
+        if event_id:
+            rec = self._event_mine(user, event_id, states=('draft',))
+            if not rec:
+                return {'error': 'Event tidak ditemukan atau sudah tidak bisa diubah.'}
+        try:
+            with request.env.cr.savepoint():
+                if rec:
+                    rec.write(vals)
+                else:
+                    rec = request.env['smartpolling.event'].sudo().create(
+                        dict(vals, pic_id=user.relawan_id.id))
+                if ajukan:
+                    rec.action_ajukan()
+        except (UserError, ValidationError) as e:
+            return {'error': e.args[0]}
+        return {'success': True, 'id': rec.id}
+
+    @http.route('/mobile/api/event/ajukan', type='jsonrpc', auth='public', csrf=False)
+    def api_event_ajukan(self, event_id=None, **kwargs):
+        user = self._auth_check()
+        if not user:
+            return {'error': 'unauthorized'}
+        rec = self._event_mine(user, event_id, states=('draft',))
+        if not rec:
+            return {'error': 'Event tidak ditemukan atau sudah diajukan.'}
+        try:
+            with request.env.cr.savepoint():
+                rec.action_ajukan()
+        except (UserError, ValidationError) as e:
+            return {'error': e.args[0]}
+        return {'success': True}
+
+    @http.route('/mobile/api/event/delete', type='jsonrpc', auth='public', csrf=False)
+    def api_event_delete(self, event_id=None, **kwargs):
+        user = self._auth_check()
+        if not user:
+            return {'error': 'unauthorized'}
+        rec = self._event_mine(user, event_id, states=('draft',))
+        if not rec:
+            return {'error': 'Hanya event berstatus draft yang bisa dihapus.'}
+        rec.unlink()
+        return {'success': True}
+
+    @http.route('/mobile/api/event/laporan', type='jsonrpc', auth='public', csrf=False)
+    def api_event_laporan(self, event_id=None, data=None, **kwargs):
+        """Kirim berita acara: ringkasan, peserta, foto kegiatan, rincian penggunaan dana.
+        Baris realisasi dengan 'id' = baris lama (bukti lama dipertahankan kalau tidak diganti)."""
+        user = self._auth_check()
+        if not user:
+            return {'error': 'unauthorized'}
+        rec = self._event_mine(user, event_id, states=('disetujui',))
+        if not rec:
+            return {'error': 'Event tidak ditemukan atau belum/tidak lagi bisa dilaporkan.'}
+        data = data or {}
+        lines = data.get('realisasi') or []
+        if not lines:
+            return {'error': 'Rincian penggunaan dana minimal 1 baris.'}
+        if len(lines) > self._MAX_LINES:
+            return {'error': f'Rincian penggunaan dana maksimal {self._MAX_LINES} baris.'}
+        try:
+            peserta = int(data.get('jumlah_peserta') or 0)
+        except (TypeError, ValueError):
+            return {'error': 'Jumlah peserta harus berupa angka.'}
+        if peserta < 0:
+            return {'error': 'Jumlah peserta tidak boleh negatif.'}
+
+        def _img_ok(b64):
+            return bool(b64) and len(b64) <= 900_000 and _is_valid_image(b64)
+
+        existing = set(rec.realisasi_ids.ids)
+        cmds, keep = [], set()
+        for i, line in enumerate(lines, 1):
+            uraian = (line.get('uraian') or '').strip()
+            jumlah = self._to_float(line.get('jumlah'))
+            if not uraian:
+                return {'error': f'Uraian penggunaan dana baris {i} wajib diisi.'}
+            if jumlah is None:
+                return {'error': f'Jumlah dana baris {i} tidak valid.'}
+            line_vals = {'sequence': i, 'uraian': uraian[:200], 'jumlah': jumlah}
+            if line.get('bukti'):
+                if not _img_ok(line['bukti']):
+                    return {'error': f'Foto bukti baris {i} tidak valid atau terlalu besar.'}
+                line_vals['bukti'] = line['bukti']
+            line_id = int(line.get('id') or 0)
+            if line_id in existing:
+                keep.add(line_id)
+                cmds.append(Command.update(line_id, line_vals))
+            else:
+                cmds.append(Command.create(line_vals))
+        cmds += [Command.delete(lid) for lid in existing - keep]
+
+        vals = {
+            'ba_ringkasan': (data.get('ringkasan') or '').strip()[:5000],
+            'ba_jumlah_peserta': peserta,
+            'realisasi_ids': cmds,
+        }
+        if data.get('foto_kegiatan'):
+            if not _img_ok(data['foto_kegiatan']):
+                return {'error': 'Foto kegiatan tidak valid atau terlalu besar.'}
+            vals['ba_foto_kegiatan'] = data['foto_kegiatan']
+        try:
+            with request.env.cr.savepoint():
+                rec.write(vals)
+                rec.action_kirim_laporan()
+        except (UserError, ValidationError) as e:
+            return {'error': e.args[0]}
+        return {'success': True}

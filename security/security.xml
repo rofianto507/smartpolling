@@ -132,5 +132,46 @@
         <field name="groups" eval="[(4, ref('smartpolling.group_relawan')), (4, ref('smartpolling.group_viewer'))]"/>
     </record>
 
+    <!-- ─── Event ───────────────────────────────────────────────
+         Relawan hanya membaca event miliknya (PIC). Semua perubahan oleh petugas
+         lewat controller /mobile (sudo + validasi alur status). Viewer & Admin
+         melihat semua; Admin diberi rule eksplisit (group rule di-OR). -->
+    <record id="rule_event_admin" model="ir.rule">
+        <field name="name">Event: admin semua</field>
+        <field name="model_id" ref="model_smartpolling_event"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_admin')), (4, ref('smartpolling.group_viewer'))]"/>
+    </record>
+    <record id="rule_event_relawan" model="ir.rule">
+        <field name="name">Event: hanya milik PIC sendiri</field>
+        <field name="model_id" ref="model_smartpolling_event"/>
+        <field name="domain_force">[('pic_id', '=', user.relawan_id.id)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_relawan'))]"/>
+    </record>
+    <record id="rule_event_anggaran_admin" model="ir.rule">
+        <field name="name">Event anggaran: admin semua</field>
+        <field name="model_id" ref="model_smartpolling_event_anggaran"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_admin')), (4, ref('smartpolling.group_viewer'))]"/>
+    </record>
+    <record id="rule_event_anggaran_relawan" model="ir.rule">
+        <field name="name">Event anggaran: milik PIC sendiri</field>
+        <field name="model_id" ref="model_smartpolling_event_anggaran"/>
+        <field name="domain_force">[('event_id.pic_id', '=', user.relawan_id.id)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_relawan'))]"/>
+    </record>
+    <record id="rule_event_realisasi_admin" model="ir.rule">
+        <field name="name">Event realisasi: admin semua</field>
+        <field name="model_id" ref="model_smartpolling_event_realisasi"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_admin')), (4, ref('smartpolling.group_viewer'))]"/>
+    </record>
+    <record id="rule_event_realisasi_relawan" model="ir.rule">
+        <field name="name">Event realisasi: milik PIC sendiri</field>
+        <field name="model_id" ref="model_smartpolling_event_realisasi"/>
+        <field name="domain_force">[('event_id.pic_id', '=', user.relawan_id.id)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_relawan'))]"/>
+    </record>
+
     </data>
 </odoo>

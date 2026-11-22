@@ -24,3 +24,12 @@ access_berita_viewer,berita viewer,model_smartpolling_berita,smartpolling.group_
 access_agenda_admin,agenda admin,model_smartpolling_agenda,smartpolling.group_admin,1,1,1,1
 access_agenda_relawan,agenda relawan,model_smartpolling_agenda,smartpolling.group_relawan,1,0,0,0
 access_agenda_viewer,agenda viewer,model_smartpolling_agenda,smartpolling.group_viewer,1,0,0,0
+access_event_admin,event admin,model_smartpolling_event,smartpolling.group_admin,1,1,1,1
+access_event_relawan,event relawan,model_smartpolling_event,smartpolling.group_relawan,1,0,0,0
+access_event_viewer,event viewer,model_smartpolling_event,smartpolling.group_viewer,1,0,0,0
+access_event_anggaran_admin,event anggaran admin,model_smartpolling_event_anggaran,smartpolling.group_admin,1,1,1,1
+access_event_anggaran_relawan,event anggaran relawan,model_smartpolling_event_anggaran,smartpolling.group_relawan,1,0,0,0
+access_event_anggaran_viewer,event anggaran viewer,model_smartpolling_event_anggaran,smartpolling.group_viewer,1,0,0,0
+access_event_realisasi_admin,event realisasi admin,model_smartpolling_event_realisasi,smartpolling.group_admin,1,1,1,1
+access_event_realisasi_relawan,event realisasi relawan,model_smartpolling_event_realisasi,smartpolling.group_relawan,1,0,0,0
+access_event_realisasi_viewer,event realisasi viewer,model_smartpolling_event_realisasi,smartpolling.group_viewer,1,0,0,0

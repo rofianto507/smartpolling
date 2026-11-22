@@ -416,3 +416,86 @@ html, body {
 .sm-rich a { color: var(--sm-primary); }
 .sm-rich h1, .sm-rich h2, .sm-rich h3 { font-size: 16px; margin: 1em 0 .5em; }
 .sm-rich ul, .sm-rich ol { padding-left: 1.3em; }
+
+/* ══════════════════════════════════════════════════════
+   EVENT
+   ══════════════════════════════════════════════════════ */
+.sm-input--plain { padding-left: 14px; }
+.sm-hint { font-size: 11.5px; color: var(--sm-on-surf-var); margin-top: 6px; opacity: .85; }
+.sm-alert--action { cursor: pointer; align-items: center; margin-bottom: 0; }
+.sm-alert--action > span { flex: 1; }
+.sm-card-subtitle { font-size: 12px; font-weight: 700; color: var(--sm-on-surf-var); text-transform: uppercase; letter-spacing: .4px; margin: 14px 0 4px; }
+.sm-row-3 { display: grid; grid-template-columns: 0.8fr 1fr 1.6fr; gap: 8px; }
+.sm-neg { color: var(--sm-error); }
+.sm-pos { color: var(--sm-success); }
+
+/* Status badge event */
+.sm-badge--ev-draft     { background: #f1f0f2; color: #6b6570; }
+.sm-badge--ev-diajukan  { background: #fef3c7; color: #b45309; }
+.sm-badge--ev-disetujui { background: #dbeafe; color: #1d4ed8; }
+.sm-badge--ev-ditolak   { background: var(--sm-error-lt); color: var(--sm-error); }
+.sm-badge--ev-laporan   { background: #ede9fe; color: #6d28d9; }
+.sm-badge--ev-selesai   { background: var(--sm-success-lt); color: var(--sm-success); }
+
+/* Progress mini (list & detail) */
+.sm-mini-progress { height: 5px; border-radius: 3px; background: var(--sm-primary-lt); overflow: hidden; margin-top: 6px; }
+.sm-mini-progress > div { height: 100%; background: var(--sm-primary); border-radius: 3px; transition: width .4s; }
+.sm-mini-progress--lg { height: 10px; border-radius: 5px; }
+.sm-event-item .sm-list-meta i { color: var(--sm-accent); }
+
+/* Detail event */
+.sm-ev-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.sm-ev-code { font-size: 11.5px; color: var(--sm-accent); font-weight: 600; letter-spacing: .3px; }
+.sm-ev-desc { font-size: 13.5px; line-height: 1.55; color: var(--sm-on-surface); white-space: pre-line; margin-top: 10px; }
+.sm-ev-progress-label { font-size: 13px; color: var(--sm-on-surf-var); }
+.sm-ev-stats { display: flex; gap: 8px; margin-top: 12px; }
+.sm-ev-stats > div { flex: 1; background: var(--sm-primary-xs); border-radius: var(--sm-radius-sm); padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sm-ev-stats span { font-size: 10.5px; color: var(--sm-on-surf-var); text-transform: uppercase; letter-spacing: .3px; }
+.sm-ev-stats b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Bar perbandingan rencana vs realisasi */
+.sm-cmp { display: flex; flex-direction: column; gap: 10px; }
+.sm-cmp-label { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--sm-on-surf-var); margin-bottom: 4px; }
+.sm-cmp-label b { color: var(--sm-on-surface); font-size: 13px; }
+.sm-cmp-track { height: 14px; border-radius: 7px; background: #f1edf0; overflow: hidden; }
+.sm-cmp-fill { height: 100%; border-radius: 7px; min-width: 3px; transition: width .5s; }
+.sm-cmp-fill--plan { background: #c9b3c2; }
+.sm-cmp-fill--real { background: var(--sm-primary); }
+.sm-cmp-fill--vote { background: #27AE60; }
+.sm-cmp-fill--over { background: var(--sm-error); }
+
+/* Baris rincian (anggaran / realisasi) */
+.sm-line-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--sm-outline); }
+.sm-line-main { flex: 1; min-width: 0; }
+.sm-line-title { font-size: 13.5px; font-weight: 600; color: var(--sm-on-surface); }
+.sm-line-sub { font-size: 11.5px; color: var(--sm-on-surf-var); margin-top: 2px; }
+.sm-line-amount { font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+.sm-line-thumb { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--sm-outline); }
+.sm-line-total { display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; padding: 8px 0 0; color: var(--sm-on-surf-var); }
+.sm-line-total b { font-size: 15px; color: var(--sm-on-surface); }
+.sm-line-total--ok b { color: var(--sm-success); }
+.sm-line-total--over b { color: var(--sm-error); }
+.sm-ba-foto { width: 100%; max-height: 220px; object-fit: cover; border-radius: var(--sm-radius-sm); margin-bottom: 8px; }
+
+/* Form baris dinamis */
+.sm-line-edit { border: 1px solid var(--sm-outline); border-radius: var(--sm-radius-sm); padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--sm-primary-xs); }
+.sm-line-edit .sm-input { background: var(--sm-surface); padding-top: 10px; padding-bottom: 10px; font-size: 14px; }
+.sm-line-edit-head { display: flex; justify-content: space-between; align-items: center; }
+.sm-line-no { font-size: 11.5px; font-weight: 700; color: var(--sm-accent); }
+.sm-icon-btn { border: none; background: none; color: var(--sm-on-surf-var); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; }
+.sm-icon-btn:hover { background: var(--sm-error-lt); color: var(--sm-error); }
+.sm-line-edit-row { display: flex; gap: 8px; align-items: stretch; }
+.sm-line-edit-row .sm-input { flex: 1; }
+.sm-bukti-btn { width: 78px; flex-shrink: 0; border: 1.5px dashed var(--sm-outline); border-radius: var(--sm-radius-sm); background: var(--sm-surface); color: var(--sm-accent); font-size: 12px; font-family: var(--sm-font); cursor: pointer; padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.sm-bukti-btn--ok { border-style: solid; border-color: var(--sm-success); }
+.sm-bukti-btn img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Action bar bawah (beberapa tombol sejajar) */
+.sm-action-bar { display: flex; gap: 8px; margin: 4px -16px -16px; }
+.sm-action-bar:empty { display: none; }
+.sm-action-bar .sm-btn-primary, .sm-action-bar .sm-btn-secondary { margin-top: 0; min-height: 46px; justify-content: center; }
+.sm-action-bar .sm-btn-primary { flex: 1; width: auto; }
+.sm-action-bar .sm-btn-secondary { flex: 0 0 auto; }
+.sm-page-body > .sm-alert { margin-bottom: 0; }
+.sm-row-2 > *, .sm-row-3 > * { min-width: 0; }
+.sm-input[type="datetime-local"], .sm-input[type="date"] { min-width: 0; }

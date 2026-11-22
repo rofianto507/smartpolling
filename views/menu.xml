@@ -80,6 +80,15 @@
             groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
             sequence="50"/>
 
+        <!-- Event penggalangan suara: pengajuan dari petugas, persetujuan & evaluasi oleh admin pusat -->
+        <menuitem
+            id="menu_smartpolling_event"
+            name="Event"
+            parent="menu_smartpolling_root"
+            action="action_smartpolling_event"
+            groups="smartpolling.group_admin,smartpolling.group_viewer"
+            sequence="55"/>
+
         <!-- Informasi: Berita & Agenda (ditampilkan ke petugas di app /mobile) -->
         <menuitem
             id="menu_smartpolling_informasi"

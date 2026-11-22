@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_smartpolling_event_list" model="ir.ui.view">
+            <field name="name">event.list.smartpolling</field>
+            <field name="model">smartpolling.event</field>
+            <field name="arch" type="xml">
+                <list string="Event" decoration-muted="state == 'ditolak'" decoration-info="state in ('diajukan', 'laporan')">
+                    <field name="code" optional="show"/>
+                    <field name="name"/>
+                    <field name="pic_id"/>
+                    <field name="tanggal_mulai"/>
+                    <field name="currency_id" column_invisible="1"/>
+                    <field name="total_anggaran" sum="Total" optional="hide"/>
+                    <field name="dana_disetujui" sum="Total"/>
+                    <field name="total_realisasi" sum="Total"/>
+                    <field name="selisih_dana" sum="Total" optional="show"
+                        decoration-danger="selisih_dana &lt; 0"/>
+                    <field name="target_dpt" sum="Total"/>
+                    <field name="realisasi_dpt" sum="Total"/>
+                    <field name="realisasi_memilih" sum="Total"/>
+                    <field name="persen_target" widget="progressbar" optional="show"/>
+                    <field name="state" widget="badge"
+                        decoration-muted="state == 'draft'"
+                        decoration-warning="state in ('diajukan', 'laporan')"
+                        decoration-info="state == 'disetujui'"
+                        decoration-success="state == 'selesai'"
+                        decoration-danger="state == 'ditolak'"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_event_form" model="ir.ui.view">
+            <field name="name">event.form.smartpolling</field>
+            <field name="model">smartpolling.event</field>
+            <field name="arch" type="xml">
+                <form string="Event">
+                    <header>
+                        <button name="action_ajukan" string="Ajukan" type="object" class="btn-primary"
+                            invisible="state != 'draft'" groups="smartpolling.group_admin"/>
+                        <button name="action_setujui" string="Setujui &amp; Danai" type="object" class="btn-primary"
+                            invisible="state != 'diajukan'" groups="smartpolling.group_admin"
+                            confirm="Setujui event ini dengan dana sebesar nilai 'Dana Disetujui'?"/>
+                        <button name="action_minta_revisi" string="Minta Revisi" type="object" class="btn-secondary"
+                            invisible="state != 'diajukan'" groups="smartpolling.group_admin"/>
+                        <button name="action_tolak" string="Tolak" type="object" class="btn-danger"
+                            invisible="state != 'diajukan'" groups="smartpolling.group_admin"/>
+                        <button name="action_selesai" string="Verifikasi &amp; Tutup" type="object" class="btn-primary"
+                            invisible="state != 'laporan'" groups="smartpolling.group_admin"/>
+                        <button name="action_kembalikan_laporan" string="Kembalikan Laporan" type="object" class="btn-secondary"
+                            invisible="state != 'laporan'" groups="smartpolling.group_admin"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,diajukan,disetujui,laporan,selesai"/>
+                    </header>
+                    <div class="alert alert-info mb-0" role="alert" invisible="state != 'diajukan'" groups="smartpolling.group_admin">
+                        Event ini menunggu persetujuan pendanaan. Periksa rincian anggaran, sesuaikan <b>Dana Disetujui</b> bila perlu,
+                        lalu klik <b>Setujui &amp; Danai</b>. Untuk menolak atau minta revisi, isi <b>Catatan Admin</b> dulu.
+                    </div>
+                    <div class="alert alert-info mb-0" role="alert" invisible="state != 'laporan'" groups="smartpolling.group_admin">
+                        Berita acara sudah masuk. Periksa tab <b>Berita Acara</b> dan <b>Evaluasi</b>, lalu klik
+                        <b>Verifikasi &amp; Tutup</b> atau kembalikan dengan catatan.
+                    </div>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_survey" type="object" class="oe_stat_button" icon="fa-comments">
+                                <field name="realisasi_dpt" widget="statinfo" string="DPT Tersurvey"/>
+                            </button>
+                        </div>
+                        <widget name="web_ribbon" title="Ditolak" bg_color="text-bg-danger" invisible="state != 'ditolak'"/>
+                        <widget name="web_ribbon" title="Selesai" bg_color="text-bg-success" invisible="state != 'selesai'"/>
+                        <div class="oe_title">
+                            <field name="code" class="text-muted"/>
+                            <h1><field name="name" placeholder="Nama event" readonly="state not in ('draft',)"/></h1>
+                        </div>
+                        <group>
+                            <group string="Pelaksanaan">
+                                <field name="pic_id" readonly="state != 'draft'"/>
+                                <field name="tanggal_mulai" readonly="state not in ('draft', 'diajukan')"/>
+                                <field name="tanggal_selesai" readonly="state not in ('draft', 'diajukan')"/>
+                                <field name="lokasi" readonly="state not in ('draft', 'diajukan')"/>
+                            </group>
+                            <group string="Target &amp; Pendanaan">
+                                <field name="currency_id" invisible="1"/>
+                                <field name="target_dpt" readonly="state != 'draft'"/>
+                                <field name="total_anggaran"/>
+                                <field name="dana_disetujui" readonly="state not in ('diajukan',)"
+                                    help="Default = total anggaran diajukan. Bisa disesuaikan admin sebelum menyetujui."/>
+                                <field name="disetujui_oleh" invisible="not disetujui_oleh"/>
+                                <field name="tanggal_disetujui" invisible="not tanggal_disetujui"/>
+                            </group>
+                        </group>
+                        <group>
+                            <field name="catatan_admin" placeholder="Alasan penolakan / permintaan revisi / catatan untuk PIC (tampil di app petugas)"
+                                readonly="state in ('selesai',)"/>
+                        </group>
+                        <notebook>
+                            <page string="Pengajuan" name="pengajuan">
+                                <field name="deskripsi" placeholder="Deskripsi kegiatan dan tujuan penggalangan suara" readonly="state != 'draft'"/>
+                                <field name="anggaran_ids" readonly="state != 'draft'">
+                                    <list editable="bottom">
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="uraian"/>
+                                        <field name="qty"/>
+                                        <field name="satuan"/>
+                                        <field name="currency_id" column_invisible="1"/>
+                                        <field name="harga_satuan"/>
+                                        <field name="subtotal" sum="Total Anggaran"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Berita Acara" name="berita_acara" invisible="state not in ('disetujui', 'laporan', 'selesai')">
+                                <group>
+                                    <group>
+                                        <field name="ba_tanggal"/>
+                                        <field name="ba_jumlah_peserta" readonly="state == 'selesai'"/>
+                                    </group>
+                                    <group>
+                                        <field name="ba_foto_kegiatan" widget="image" options="{'size': [240, 160]}" readonly="state == 'selesai'"/>
+                                    </group>
+                                </group>
+                                <field name="ba_ringkasan" placeholder="Ringkasan jalannya kegiatan" readonly="state == 'selesai'"/>
+                                <field name="realisasi_ids" readonly="state == 'selesai'">
+                                    <list editable="bottom">
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="uraian"/>
+                                        <field name="currency_id" column_invisible="1"/>
+                                        <field name="jumlah" sum="Total Realisasi"/>
+                                        <field name="bukti" widget="image" options="{'size': [0, 48]}"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Evaluasi" name="evaluasi" invisible="state not in ('disetujui', 'laporan', 'selesai')">
+                                <group>
+                                    <group string="Anggaran vs Realisasi Dana">
+                                        <field name="dana_disetujui" string="Dana Disetujui"/>
+                                        <field name="total_realisasi"/>
+                                        <field name="selisih_dana" decoration-danger="selisih_dana &lt; 0" decoration-success="selisih_dana &gt;= 0"/>
+                                        <field name="persen_serapan" widget="progressbar"/>
+                                    </group>
+                                    <group string="Target vs Realisasi Suara">
+                                        <field name="target_dpt"/>
+                                        <field name="realisasi_dpt"/>
+                                        <field name="persen_target" widget="progressbar"/>
+                                        <field name="realisasi_memilih"/>
+                                        <field name="persen_memilih" widget="progressbar"/>
+                                        <field name="biaya_per_suara"/>
+                                    </group>
+                                </group>
+                                <p class="text-muted small">
+                                    Realisasi suara dihitung otomatis dari survey yang ditandai untuk event ini di app petugas
+                                    (survey terakhir per DPT). "Memilih" = DPT yang pilihan terakhirnya Memilih.
+                                </p>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_event_pivot" model="ir.ui.view">
+            <field name="name">event.pivot.smartpolling</field>
+            <field name="model">smartpolling.event</field>
+            <field name="arch" type="xml">
+                <pivot string="Evaluasi Event" display_quantity="0">
+                    <field name="pic_id" type="row"/>
+                    <field name="dana_disetujui" type="measure"/>
+                    <field name="total_realisasi" type="measure"/>
+                    <field name="selisih_dana" type="measure"/>
+                    <field name="target_dpt" type="measure"/>
+                    <field name="realisasi_dpt" type="measure"/>
+                    <field name="realisasi_memilih" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_event_graph" model="ir.ui.view">
+            <field name="name">event.graph.smartpolling</field>
+            <field name="model">smartpolling.event</field>
+            <field name="arch" type="xml">
+                <graph string="Evaluasi Event" type="bar">
+                    <field name="pic_id"/>
+                    <field name="total_realisasi" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_event_search" model="ir.ui.view">
+            <field name="name">event.search.smartpolling</field>
+            <field name="model">smartpolling.event</field>
+            <field name="arch" type="xml">
+                <search string="Cari Event">
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="pic_id"/>
+                    <field name="lokasi"/>
+                    <separator/>
+                    <filter string="Perlu Tindakan Admin" name="filter_perlu_tindakan"
+                        domain="[('state', 'in', ('diajukan', 'laporan'))]"/>
+                    <separator/>
+                    <filter string="Draft" name="filter_draft" domain="[('state', '=', 'draft')]"/>
+                    <filter string="Diajukan" name="filter_diajukan" domain="[('state', '=', 'diajukan')]"/>
+                    <filter string="Disetujui" name="filter_disetujui" domain="[('state', '=', 'disetujui')]"/>
+                    <filter string="Laporan Masuk" name="filter_laporan" domain="[('state', '=', 'laporan')]"/>
+                    <filter string="Selesai" name="filter_selesai" domain="[('state', '=', 'selesai')]"/>
+                    <filter string="Ditolak" name="filter_ditolak" domain="[('state', '=', 'ditolak')]"/>
+                    <separator/>
+                    <filter string="Dana Melebihi Anggaran" name="filter_over" domain="[('selisih_dana', '&lt;', 0)]"/>
+                    <filter string="Tanggal Mulai" name="filter_tanggal" date="tanggal_mulai"/>
+                    <filter string="Diarsipkan" name="filter_inactive" domain="[('active', '=', False)]"/>
+                    <group>
+                        <filter string="Status" name="groupby_state" context="{'group_by': 'state'}"/>
+                        <filter string="PIC" name="groupby_pic" context="{'group_by': 'pic_id'}"/>
+                        <filter string="Bulan" name="groupby_bulan" context="{'group_by': 'tanggal_mulai:month'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_smartpolling_event" model="ir.actions.act_window">
+            <field name="name">Event</field>
+            <field name="res_model">smartpolling.event</field>
+            <field name="view_mode">list,pivot,graph,form</field>
+            <field name="search_view_id" ref="view_smartpolling_event_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">Belum ada event</p>
+                <p>Petugas mengajukan event penggalangan suara dari app mobile (<code>/mobile</code>, tab Event).
+                   Pengajuan masuk ke sini untuk disetujui dan didanai, lalu dievaluasi setelah berita acara dikirim.</p>
+            </field>
+        </record>
+    </data>
+</odoo>

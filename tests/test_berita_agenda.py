@@ -124,33 +124,34 @@ class TestBeritaAgenda(HttpCase):
                 await wait('.sm-tab.active .sm-agenda-item');
                 await wait('.sm-tab.active .sm-news-item');
 
-                // Tab Info → Berita (draft tidak boleh muncul)
-                clickText('.sm-nav-item', 'Info');
-                await wait('.sm-tab.active .sm-segment');
-                await wait('.sm-tab.active .sm-news-item');
-                const n = document.querySelectorAll('.sm-tab.active .sm-news-item').length;
-                if (n !== 1) throw new Error('Jumlah berita di tab Info = ' + n + ', harusnya 1');
+                // Info (tombol app bar) → Berita (draft tidak boleh muncul)
+                const P = '.sm-segment ~ .sm-list ';   // daftar di halaman Info
+                clickText('.sm-appbar-btn', 'Info');
+                await wait('.sm-segment');
+                await wait(P + '.sm-news-item');
+                const n = document.querySelectorAll(P + '.sm-news-item').length;
+                if (n !== 1) throw new Error('Jumlah berita di halaman Info = ' + n + ', harusnya 1');
 
                 // Detail berita: HTML dirender (bukan di-escape)
-                document.querySelector('.sm-tab.active .sm-news-item').click();
+                document.querySelector(P + '.sm-news-item').click();
                 const rich = await wait('.sm-rich');
                 if (!rich.querySelector('b')) throw new Error('Isi berita tidak dirender sebagai HTML');
                 document.querySelector('.sm-back-btn').click();
 
-                // Agenda: akan datang (2, termasuk batal) lalu sudah lewat (1)
-                await wait('.sm-tab.active .sm-segment');
+                // Kembali ke halaman Info → Agenda: akan datang (2, termasuk batal) lalu sudah lewat (1)
+                await wait('.sm-segment');
                 clickText('.sm-segment-btn', 'Agenda');
-                await wait('.sm-tab.active .sm-agenda-item');
+                await wait(P + '.sm-agenda-item');
                 if (!document.querySelector('.sm-agenda-item--batal')) throw new Error('Agenda batal tidak ditandai');
                 clickText('.sm-chip', 'Sudah Lewat');
                 await new Promise((r) => setTimeout(r, 800));
-                const lewat = [...document.querySelectorAll('.sm-tab.active .sm-agenda-item')].map((e) => e.textContent);
+                const lewat = [...document.querySelectorAll(P + '.sm-agenda-item')].map((e) => e.textContent);
                 if (lewat.length !== 1 || !lewat[0].includes('Sosialisasi Lalu')) {
                     throw new Error('Daftar agenda lewat salah: ' + JSON.stringify(lewat));
                 }
 
                 // Detail agenda
-                document.querySelector('.sm-tab.active .sm-agenda-item').click();
+                document.querySelector(P + '.sm-agenda-item').click();
                 await wait('.sm-article-title');
                 console.log('test successful');
             } catch (e) {
