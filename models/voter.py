@@ -10,7 +10,7 @@ class Voter(models.Model):
     _order = 'tanggal desc'
     _rec_name = 'tanggal'
 
-    dpt_id = fields.Many2one('smartpolling.dpt', string='DPT', required=True, ondelete='cascade', tracking=True)
+    dpt_id = fields.Many2one('smartpolling.dpt', string='DPT', required=True, ondelete='cascade')
     nik = fields.Char('NIK', related='dpt_id.nik', store=True, readonly=True)
     petugas_id = fields.Many2one(
         'smartpolling.relawan', string='Petugas Pendata',
@@ -40,7 +40,7 @@ class Voter(models.Model):
         ('ragu_ragu', 'Ragu-ragu'),
         ('belum_menentukan', 'Belum Menentukan'),
         ('tidak_memilih', 'Tidak Memilih'),
-    ], string='Pilihan', required=True, tracking=True)
+    ], string='Pilihan', required=True)
 
     def _pilihan_label(self):
         return dict(self._fields['pilihan'].selection).get(self.pilihan, self.pilihan)

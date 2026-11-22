@@ -18,3 +18,9 @@ access_voter_admin,voter admin,model_smartpolling_voter,smartpolling.group_admin
 access_voter_relawan,voter relawan,model_smartpolling_voter,smartpolling.group_relawan,1,1,1,1
 access_voter_viewer,voter viewer,model_smartpolling_voter,smartpolling.group_viewer,1,0,0,0
 access_relawan_create_user_wizard_admin,relawan create user wizard admin,model_smartpolling_relawan_create_user_wizard,smartpolling.group_admin,1,1,1,1
+access_berita_admin,berita admin,model_smartpolling_berita,smartpolling.group_admin,1,1,1,1
+access_berita_relawan,berita relawan,model_smartpolling_berita,smartpolling.group_relawan,1,0,0,0
+access_berita_viewer,berita viewer,model_smartpolling_berita,smartpolling.group_viewer,1,0,0,0
+access_agenda_admin,agenda admin,model_smartpolling_agenda,smartpolling.group_admin,1,1,1,1
+access_agenda_relawan,agenda relawan,model_smartpolling_agenda,smartpolling.group_relawan,1,0,0,0
+access_agenda_viewer,agenda viewer,model_smartpolling_agenda,smartpolling.group_viewer,1,0,0,0

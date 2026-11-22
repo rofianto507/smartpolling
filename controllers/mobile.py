@@ -1,5 +1,7 @@
+import html as htmllib
 import json
 import logging
+import re
 from datetime import datetime, timedelta
 
 from odoo import http
@@ -396,3 +398,116 @@ class SmartPollingMobileController(http.Controller):
             return {'error': 'Foto tidak valid.'}
         user.relawan_id.sudo().write({'foto': foto})
         return {'success': True}
+
+    # ─────────────────────────────────────────────────────────────
+    # API: BERITA & AGENDA (hanya yang diterbitkan admin)
+    # ─────────────────────────────────────────────────────────────
+    _BERITA_DOMAIN = [('state', '=', 'terbit')]
+    _AGENDA_DOMAIN = [('state', 'in', ('terbit', 'batal'))]
+
+    def _berita_summary(self, rec):
+        teks = (rec.ringkasan or '').strip()
+        if not teks and rec.isi:
+            # Tag diganti spasi (bukan dibuang) supaya <li>/<p> berurutan tidak menempel
+            teks = ' '.join(htmllib.unescape(re.sub(r'<[^>]+>', ' ', rec.isi)).split())
+            teks = re.sub(r'\s+([.,:;!?])', r'\1', teks)
+            if len(teks) > 160:
+                teks = teks[:157].rstrip() + '...'
+        return {
+            'id': rec.id,
+            'judul': rec.name,
+            'ringkasan': teks,
+            'tanggal': rec.tanggal_terbit and rec.tanggal_terbit.strftime('%Y-%m-%d %H:%M:%S'),
+            'is_pinned': rec.is_pinned,
+            # bin_size=True → field berisi ukuran (string), bukan isi biner
+            'has_gambar': bool(rec.gambar),
+        }
+
+    def _agenda_upcoming_domain(self):
+        """Agenda dianggap 'akan datang' kalau belum selesai. Agenda tanpa waktu
+        selesai dianggap berlangsung sampai akhir hari mulainya (WIB)."""
+        now = datetime.utcnow()
+        today_wib = (now + _WIB_OFFSET).date()
+        today_start_utc = datetime(today_wib.year, today_wib.month, today_wib.day) - _WIB_OFFSET
+        return ['|',
+                ('tanggal_selesai', '>=', now),
+                '&', ('tanggal_selesai', '=', False), ('tanggal_mulai', '>=', today_start_utc)]
+
+    def _agenda_dict(self, rec, with_detail=False):
+        data = {
+            'id': rec.id,
+            'nama': rec.name,
+            'mulai': rec.tanggal_mulai.strftime('%Y-%m-%d %H:%M:%S'),
+            'selesai': rec.tanggal_selesai and rec.tanggal_selesai.strftime('%Y-%m-%d %H:%M:%S'),
+            'lokasi': rec.lokasi or '',
+            'state': rec.state,
+        }
+        if with_detail:
+            data['deskripsi'] = rec.deskripsi or ''
+        return data
+
+    @http.route('/mobile/api/info/home', type='jsonrpc', auth='public', csrf=False)
+    def api_info_home(self, **kwargs):
+        """Ringkasan untuk Beranda: 3 berita terbaru + 3 agenda terdekat."""
+        if not self._auth_check():
+            return {'error': 'unauthorized'}
+        Berita = request.env['smartpolling.berita'].sudo().with_context(bin_size=True)
+        Agenda = request.env['smartpolling.agenda'].sudo()
+        berita = Berita.search(self._BERITA_DOMAIN, limit=3)
+        agenda = Agenda.search(
+            [('state', '=', 'terbit')] + self._agenda_upcoming_domain(),
+            order='tanggal_mulai asc', limit=3)
+        return {
+            'berita': [self._berita_summary(b) for b in berita],
+            'agenda': [self._agenda_dict(a) for a in agenda],
+        }
+
+    @http.route('/mobile/api/berita/list', type='jsonrpc', auth='public', csrf=False)
+    def api_berita_list(self, offset=0, limit=20, search=None, **kwargs):
+        if not self._auth_check():
+            return {'error': 'unauthorized'}
+        Berita = request.env['smartpolling.berita'].sudo().with_context(bin_size=True)
+        domain = list(self._BERITA_DOMAIN)
+        if search:
+            domain += [('name', 'ilike', search)]
+        total = Berita.search_count(domain)
+        records = Berita.search(domain, offset=int(offset or 0), limit=min(int(limit or 20), 50))
+        return {'total': total, 'records': [self._berita_summary(b) for b in records]}
+
+    @http.route('/mobile/api/berita/record', type='jsonrpc', auth='public', csrf=False)
+    def api_berita_record(self, berita_id=None, **kwargs):
+        if not self._auth_check():
+            return {'error': 'unauthorized'}
+        rec = request.env['smartpolling.berita'].sudo().with_context(bin_size=True).search(
+            [('id', '=', int(berita_id or 0))] + self._BERITA_DOMAIN, limit=1)
+        if not rec:
+            return {'error': 'not_found'}
+        data = self._berita_summary(rec)
+        data.update({'isi': rec.isi or '', 'penulis': rec.penulis_id.name or ''})
+        return data
+
+    @http.route('/mobile/api/agenda/list', type='jsonrpc', auth='public', csrf=False)
+    def api_agenda_list(self, mode='upcoming', offset=0, limit=20, **kwargs):
+        if not self._auth_check():
+            return {'error': 'unauthorized'}
+        Agenda = request.env['smartpolling.agenda'].sudo()
+        upcoming = self._agenda_upcoming_domain()
+        if mode == 'past':
+            domain = self._AGENDA_DOMAIN + ['!'] + upcoming
+            order = 'tanggal_mulai desc'
+        else:
+            domain = self._AGENDA_DOMAIN + upcoming
+            order = 'tanggal_mulai asc'
+        total = Agenda.search_count(domain)
+        records = Agenda.search(domain, order=order, offset=int(offset or 0), limit=min(int(limit or 20), 50))
+        return {'total': total, 'records': [self._agenda_dict(a) for a in records]}
+
+    @http.route('/mobile/api/agenda/record', type='jsonrpc', auth='public', csrf=False)
+    def api_agenda_record(self, agenda_id=None, **kwargs):
+        if not self._auth_check():
+            return {'error': 'unauthorized'}
+        rec = request.env['smartpolling.agenda'].sudo().search(
+            [('id', '=', int(agenda_id or 0))] + self._AGENDA_DOMAIN, limit=1)
+        if not rec:
+            return {'error': 'not_found'}
+        return self._agenda_dict(rec, with_detail=True)

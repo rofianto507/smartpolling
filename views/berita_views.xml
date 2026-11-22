@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_smartpolling_berita_list" model="ir.ui.view">
+            <field name="name">berita.list.smartpolling</field>
+            <field name="model">smartpolling.berita</field>
+            <field name="arch" type="xml">
+                <list string="Berita">
+                    <field name="is_pinned" widget="boolean_favorite" nolabel="1"/>
+                    <field name="name"/>
+                    <field name="tanggal_terbit"/>
+                    <field name="penulis_id" optional="show"/>
+                    <field name="state" widget="badge"
+                        decoration-success="state == 'terbit'"
+                        decoration-muted="state == 'draft'"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_berita_kanban" model="ir.ui.view">
+            <field name="name">berita.kanban.smartpolling</field>
+            <field name="model">smartpolling.berita</field>
+            <field name="arch" type="xml">
+                <kanban string="Berita">
+                    <field name="id"/>
+                    <field name="state"/>
+                    <templates>
+                        <t t-name="card" class="flex-row">
+                            <aside class="o_kanban_aside_full">
+                                <field name="gambar" widget="image" options="{'img_class': 'object-fit-cover'}"
+                                    style="width:96px;height:96px;"/>
+                            </aside>
+                            <main class="ms-2">
+                                <div class="d-flex align-items-start gap-1">
+                                    <field name="is_pinned" widget="boolean_favorite" nolabel="1"/>
+                                    <field name="name" class="fw-bold fs-5"/>
+                                </div>
+                                <field name="tanggal_terbit" class="text-muted small"/>
+                                <field name="ringkasan" class="small text-truncate"/>
+                                <footer class="mt-auto">
+                                    <field name="state" widget="badge"
+                                        decoration-success="state == 'terbit'"
+                                        decoration-muted="state == 'draft'"/>
+                                </footer>
+                            </main>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_berita_form" model="ir.ui.view">
+            <field name="name">berita.form.smartpolling</field>
+            <field name="model">smartpolling.berita</field>
+            <field name="arch" type="xml">
+                <form string="Berita">
+                    <header>
+                        <button name="action_terbitkan" string="Terbitkan" type="object"
+                            class="btn-primary" invisible="state == 'terbit'" groups="smartpolling.group_admin"/>
+                        <button name="action_draft" string="Kembalikan ke Draft" type="object"
+                            class="btn-secondary" invisible="state == 'draft'" groups="smartpolling.group_admin"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,terbit"/>
+                    </header>
+                    <sheet>
+                        <field name="gambar" widget="image" class="oe_avatar"/>
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1><field name="name" placeholder="Judul berita"/></h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="tanggal_terbit"/>
+                                <field name="penulis_id"/>
+                            </group>
+                            <group>
+                                <field name="is_pinned"/>
+                                <field name="active" invisible="1"/>
+                            </group>
+                        </group>
+                        <field name="ringkasan" placeholder="Ringkasan singkat (opsional)"/>
+                        <notebook>
+                            <page string="Isi Berita" name="isi">
+                                <field name="isi" widget="html" placeholder="Tulis isi berita di sini..."/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_berita_search" model="ir.ui.view">
+            <field name="name">berita.search.smartpolling</field>
+            <field name="model">smartpolling.berita</field>
+            <field name="arch" type="xml">
+                <search string="Cari Berita">
+                    <field name="name"/>
+                    <field name="penulis_id"/>
+                    <separator/>
+                    <filter string="Terbit" name="filter_terbit" domain="[('state', '=', 'terbit')]"/>
+                    <filter string="Draft" name="filter_draft" domain="[('state', '=', 'draft')]"/>
+                    <filter string="Disematkan" name="filter_pinned" domain="[('is_pinned', '=', True)]"/>
+                    <separator/>
+                    <filter string="Tanggal Terbit" name="filter_tanggal" date="tanggal_terbit"/>
+                    <filter string="Diarsipkan" name="filter_inactive" domain="[('active', '=', False)]"/>
+                    <group>
+                        <filter string="Status" name="groupby_state" context="{'group_by': 'state'}"/>
+                        <filter string="Penulis" name="groupby_penulis" context="{'group_by': 'penulis_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_smartpolling_berita" model="ir.actions.act_window">
+            <field name="name">Berita</field>
+            <field name="res_model">smartpolling.berita</field>
+            <field name="view_mode">kanban,list,form</field>
+            <field name="search_view_id" ref="view_smartpolling_berita_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">Tulis berita pertama</p>
+                <p>Berita yang diterbitkan akan tampil di app mobile petugas.</p>
+            </field>
+        </record>
+    </data>
+</odoo>

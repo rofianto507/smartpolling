@@ -102,5 +102,35 @@
         <field name="perm_unlink" eval="True"/>
     </record>
 
+    <!-- ─── Berita & Agenda ─────────────────────────────────────
+         Relawan & Viewer hanya melihat yang sudah diterbitkan.
+         Admin diberi rule "semua" eksplisit supaya user yang punya grup Admin
+         sekaligus Relawan/Viewer tidak ikut terbatas (group rule di-OR). -->
+    <record id="rule_berita_admin" model="ir.rule">
+        <field name="name">Berita: admin semua</field>
+        <field name="model_id" ref="model_smartpolling_berita"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_admin'))]"/>
+    </record>
+    <record id="rule_berita_terbit" model="ir.rule">
+        <field name="name">Berita: hanya yang terbit</field>
+        <field name="model_id" ref="model_smartpolling_berita"/>
+        <field name="domain_force">[('state', '=', 'terbit')]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_relawan')), (4, ref('smartpolling.group_viewer'))]"/>
+    </record>
+
+    <record id="rule_agenda_admin" model="ir.rule">
+        <field name="name">Agenda: admin semua</field>
+        <field name="model_id" ref="model_smartpolling_agenda"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_admin'))]"/>
+    </record>
+    <record id="rule_agenda_terbit" model="ir.rule">
+        <field name="name">Agenda: hanya yang terbit/dibatalkan</field>
+        <field name="model_id" ref="model_smartpolling_agenda"/>
+        <field name="domain_force">[('state', 'in', ('terbit', 'batal'))]</field>
+        <field name="groups" eval="[(4, ref('smartpolling.group_relawan')), (4, ref('smartpolling.group_viewer'))]"/>
+    </record>
+
     </data>
 </odoo>

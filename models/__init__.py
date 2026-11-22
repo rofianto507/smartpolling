@@ -7,3 +7,5 @@ from . import dpt
 from . import voter
 from . import res_users
 from . import relawan_create_user_wizard
+from . import berita
+from . import agenda

@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    const { Component, useState, useRef, onMounted, onWillUnmount, useEffect, mount, xml } = owl;
+    const { Component, useState, useRef, onMounted, onWillUnmount, useEffect, mount, xml, markup } = owl;
 
     // ── RPC helper (JSON-RPC 2.0) ──────────────────────────────────────────
     async function rpc(url, params) {
@@ -29,6 +29,32 @@
         const d = new Date(dtStr.replace(' ', 'T') + 'Z');
         if (isNaN(d.getTime())) return dtStr;
         return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    function parseUtc(dtStr) {
+        if (!dtStr) return null;
+        const d = new Date(dtStr.replace(' ', 'T') + 'Z');
+        return isNaN(d.getTime()) ? null : d;
+    }
+    function fmtDateOnly(dtStr) {
+        const d = parseUtc(dtStr);
+        return d ? d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+    }
+    function fmtTime(d) {
+        return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    }
+    // "Sab, 22 Nov 2026 · 09.00 – 12.00" (atau tanggal selesai lengkap kalau beda hari)
+    function fmtAgendaWaktu(mulai, selesai) {
+        const s = parseUtc(mulai);
+        if (!s) return '-';
+        const e = parseUtc(selesai);
+        const tgl = s.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        let out = `${tgl} · ${fmtTime(s)}`;
+        if (e) {
+            out += s.toDateString() === e.toDateString()
+                ? ` – ${fmtTime(e)}`
+                : ` – ${e.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} ${fmtTime(e)}`;
+        }
+        return out;
     }
 
     const PILIHAN_LABELS = {
@@ -72,6 +98,39 @@
             reader.readAsDataURL(file);
         });
     }
+
+    // ── Sub-template item (dipakai di Beranda & tab Info via t-call) ──────
+    // xml`` memakai String.raw → nama template hasil xml() bisa disisipkan via ${...}.
+    const BERITA_ITEM_TPL = xml/* xml */`
+<div class="sm-news-item" t-on-click="() => this.openBeritaDetail(b.id)">
+    <div class="sm-news-thumb">
+        <t t-if="b.has_gambar"><img t-att-src="this.beritaImg(b.id, '200x200')" loading="lazy"/></t>
+        <t t-else=""><i class="fa fa-newspaper-o"/></t>
+    </div>
+    <div class="sm-news-body">
+        <div class="sm-news-title">
+            <i t-if="b.is_pinned" class="fa fa-thumb-tack sm-news-pin"/>
+            <t t-esc="b.judul"/>
+        </div>
+        <div class="sm-news-summary" t-if="b.ringkasan" t-esc="b.ringkasan"/>
+        <div class="sm-news-date" t-esc="this.fmtDateOnly(b.tanggal)"/>
+    </div>
+</div>`;
+
+    const AGENDA_ITEM_TPL = xml/* xml */`
+<div t-attf-class="sm-list-item sm-agenda-item {{ a.state === 'batal' ? 'sm-agenda-item--batal' : '' }}" t-on-click="() => this.openAgendaDetail(a.id)">
+    <div class="sm-agenda-date">
+        <div class="sm-agenda-day" t-esc="this.agendaDay(a.mulai)"/>
+        <div class="sm-agenda-mon" t-esc="this.agendaMon(a.mulai)"/>
+    </div>
+    <div class="sm-list-item-body">
+        <div class="sm-list-name" t-esc="a.nama"/>
+        <div class="sm-list-meta"><i class="fa fa-clock-o"/> <t t-esc="this.fmtAgendaWaktu(a.mulai, a.selesai)"/></div>
+        <div class="sm-list-meta" t-if="a.lokasi"><i class="fa fa-map-marker"/> <t t-esc="a.lokasi"/></div>
+    </div>
+    <span t-if="a.state === 'batal'" class="sm-badge sm-badge--ditolak">Batal</span>
+    <i t-else="" class="fa fa-chevron-right sm-list-arrow"/>
+</div>`;
 
     // ── App Component ────────────────────────────────────────────────────
     class App extends Component {
@@ -130,6 +189,30 @@
                 <div class="sm-chart-header"><i class="fa fa-bar-chart"/> Aktivitas Survey 7 Hari Terakhir</div>
                 <div class="sm-chart-canvas" t-ref="weeklyChart"/>
             </div>
+
+            <t t-if="state.infoHome and state.infoHome.agenda.length">
+                <div class="sm-section-head">
+                    <div class="sm-section-title"><i class="fa fa-calendar"/> Agenda Terdekat</div>
+                    <button class="sm-link-btn" t-on-click="() => this.openInfo('agenda')">Lihat semua</button>
+                </div>
+                <div class="sm-list">
+                    <t t-foreach="state.infoHome.agenda" t-as="a" t-key="a.id">
+                        <t t-call="${AGENDA_ITEM_TPL}"/>
+                    </t>
+                </div>
+            </t>
+
+            <t t-if="state.infoHome and state.infoHome.berita.length">
+                <div class="sm-section-head">
+                    <div class="sm-section-title"><i class="fa fa-newspaper-o"/> Berita Terbaru</div>
+                    <button class="sm-link-btn" t-on-click="() => this.openInfo('berita')">Lihat semua</button>
+                </div>
+                <div class="sm-list">
+                    <t t-foreach="state.infoHome.berita" t-as="b" t-key="b.id">
+                        <t t-call="${BERITA_ITEM_TPL}"/>
+                    </t>
+                </div>
+            </t>
 
             <div class="sm-section-title"><i class="fa fa-clock-o"/> Aktivitas Survey Terbaru</div>
             <div class="sm-card">
@@ -235,6 +318,82 @@
             </t>
         </div>
         <button class="sm-fab sm-fab--show" t-on-click="() => this.openSurveyAddFor(null, '')"><i class="fa fa-plus"/></button>
+    </div>
+
+    <!-- ══ TAB: INFO (Berita & Agenda) ══ -->
+    <div t-attf-class="sm-tab {{ !state.subpage and state.tab === 'info' ? 'active' : '' }}">
+        <div class="sm-page-body">
+            <div class="sm-segment">
+                <button t-attf-class="sm-segment-btn {{ state.infoTab === 'berita' ? 'active' : '' }}" t-on-click="() => this.switchInfoTab('berita')">
+                    <i class="fa fa-newspaper-o"/> Berita
+                </button>
+                <button t-attf-class="sm-segment-btn {{ state.infoTab === 'agenda' ? 'active' : '' }}" t-on-click="() => this.switchInfoTab('agenda')">
+                    <i class="fa fa-calendar"/> Agenda
+                </button>
+            </div>
+
+            <!-- Berita -->
+            <t t-if="state.infoTab === 'berita'">
+                <div class="sm-search-wrap">
+                    <i class="fa fa-search"/>
+                    <input class="sm-search-input" placeholder="Cari judul berita..."
+                           t-model="state.beritaSearch" t-on-keyup="onBeritaSearchKey"/>
+                </div>
+                <t t-if="state.beritaLoading and !state.beritaList.length">
+                    <div class="sm-loading-state"><i class="fa fa-spinner fa-spin"/><span>Memuat berita...</span></div>
+                </t>
+                <t t-elif="!state.beritaList.length">
+                    <div class="sm-empty-state"><i class="fa fa-newspaper-o"/>Belum ada berita</div>
+                </t>
+                <t t-else="">
+                    <div class="sm-list">
+                        <t t-foreach="state.beritaList" t-as="b" t-key="b.id">
+                            <t t-call="${BERITA_ITEM_TPL}"/>
+                        </t>
+                    </div>
+                    <t t-if="state.beritaList.length &lt; state.beritaTotal">
+                        <div class="sm-list-footer">
+                            <button class="sm-btn-secondary" t-on-click="() => this._loadBeritaList(false)" t-att-disabled="state.beritaLoading">
+                                <t t-if="state.beritaLoading"><span class="sm-spinner"/></t>
+                                <t t-else="">Muat Lebih Banyak (<t t-esc="state.beritaList.length"/>/<t t-esc="state.beritaTotal"/>)</t>
+                            </button>
+                        </div>
+                    </t>
+                </t>
+            </t>
+
+            <!-- Agenda -->
+            <t t-if="state.infoTab === 'agenda'">
+                <div class="sm-chip-row">
+                    <button t-attf-class="sm-chip {{ state.agendaMode === 'upcoming' ? 'active' : '' }}" t-on-click="() => this.switchAgendaMode('upcoming')">Akan Datang</button>
+                    <button t-attf-class="sm-chip {{ state.agendaMode === 'past' ? 'active' : '' }}" t-on-click="() => this.switchAgendaMode('past')">Sudah Lewat</button>
+                </div>
+                <t t-if="state.agendaLoading and !state.agendaList.length">
+                    <div class="sm-loading-state"><i class="fa fa-spinner fa-spin"/><span>Memuat agenda...</span></div>
+                </t>
+                <t t-elif="!state.agendaList.length">
+                    <div class="sm-empty-state"><i class="fa fa-calendar-o"/>
+                        <t t-if="state.agendaMode === 'upcoming'">Tidak ada agenda mendatang</t>
+                        <t t-else="">Belum ada agenda yang lewat</t>
+                    </div>
+                </t>
+                <t t-else="">
+                    <div class="sm-list">
+                        <t t-foreach="state.agendaList" t-as="a" t-key="a.id">
+                            <t t-call="${AGENDA_ITEM_TPL}"/>
+                        </t>
+                    </div>
+                    <t t-if="state.agendaList.length &lt; state.agendaTotal">
+                        <div class="sm-list-footer">
+                            <button class="sm-btn-secondary" t-on-click="() => this._loadAgendaList(false)" t-att-disabled="state.agendaLoading">
+                                <t t-if="state.agendaLoading"><span class="sm-spinner"/></t>
+                                <t t-else="">Muat Lebih Banyak (<t t-esc="state.agendaList.length"/>/<t t-esc="state.agendaTotal"/>)</t>
+                            </button>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </div>
     </div>
 
     <!-- ══ TAB: PROFIL ══ -->
@@ -533,6 +692,61 @@
         </div>
     </t>
 
+    <!-- ══ SUBPAGE: BERITA DETAIL ══ -->
+    <t t-if="state.subpage === 'berita-detail'">
+        <div class="sm-page-body">
+            <t t-if="!state.beritaDetail">
+                <div class="sm-loading-state"><i class="fa fa-spinner fa-spin"/><span>Memuat berita...</span></div>
+            </t>
+            <t t-else="">
+                <div class="sm-card sm-article">
+                    <t t-if="state.beritaDetail.has_gambar">
+                        <img class="sm-article-hero" t-att-src="this.beritaImg(state.beritaDetail.id, '960x0')"/>
+                    </t>
+                    <h1 class="sm-article-title" t-esc="state.beritaDetail.judul"/>
+                    <div class="sm-article-meta">
+                        <i class="fa fa-clock-o"/> <t t-esc="this.fmtDateOnly(state.beritaDetail.tanggal)"/>
+                        <t t-if="state.beritaDetail.penulis"> · <t t-esc="state.beritaDetail.penulis"/></t>
+                    </div>
+                    <div class="sm-rich" t-out="this.html(state.beritaDetail.isi)"/>
+                </div>
+            </t>
+        </div>
+    </t>
+
+    <!-- ══ SUBPAGE: AGENDA DETAIL ══ -->
+    <t t-if="state.subpage === 'agenda-detail'">
+        <div class="sm-page-body">
+            <t t-if="!state.agendaDetail">
+                <div class="sm-loading-state"><i class="fa fa-spinner fa-spin"/><span>Memuat agenda...</span></div>
+            </t>
+            <t t-else="">
+                <div class="sm-card">
+                    <t t-if="state.agendaDetail.state === 'batal'">
+                        <div class="sm-alert sm-alert--error">
+                            <i class="fa fa-ban sm-alert-icon"/><span>Agenda ini <b>dibatalkan</b>.</span>
+                        </div>
+                    </t>
+                    <div class="sm-article-title" t-esc="state.agendaDetail.nama"/>
+                    <div class="sm-info-row">
+                        <span class="sm-info-label"><i class="fa fa-clock-o"/> Waktu</span>
+                        <span class="sm-info-value" t-esc="this.fmtAgendaWaktu(state.agendaDetail.mulai, state.agendaDetail.selesai)"/>
+                    </div>
+                    <div class="sm-info-row">
+                        <span class="sm-info-label"><i class="fa fa-map-marker"/> Lokasi</span>
+                        <span class="sm-info-value" t-esc="state.agendaDetail.lokasi || '-'"/>
+                    </div>
+                </div>
+                <t t-if="state.agendaDetail.deskripsi">
+                    <div class="sm-card">
+                        <div class="sm-card-title"><i class="fa fa-align-left"/> Deskripsi</div>
+                        <div class="sm-rich" t-out="this.html(state.agendaDetail.deskripsi)"/>
+                    </div>
+                </t>
+            </t>
+        </div>
+    </t>
+
     <!-- Bottom Navigation -->
     <nav class="sm-bottom-nav">
         <button t-attf-class="sm-nav-item {{ state.tab === 'home' ? 'active' : '' }}" t-on-click="() => this.switchTab('home')">
@@ -546,6 +760,10 @@
         <button t-attf-class="sm-nav-item {{ state.tab === 'survey' ? 'active' : '' }}" t-on-click="() => this.switchTab('survey')">
             <div class="sm-nav-icon-wrap"><i class="fa fa-comments"/></div>
             <span>Survey</span>
+        </button>
+        <button t-attf-class="sm-nav-item {{ state.tab === 'info' ? 'active' : '' }}" t-on-click="() => this.switchTab('info')">
+            <div class="sm-nav-icon-wrap"><i class="fa fa-newspaper-o"/></div>
+            <span>Info</span>
         </button>
         <button t-attf-class="sm-nav-item {{ state.tab === 'profil' ? 'active' : '' }}" t-on-click="() => this.switchTab('profil')">
             <div class="sm-nav-icon-wrap"><i class="fa fa-user-circle"/></div>
@@ -611,12 +829,21 @@
                 gpsAccuracy: null,
                 gpsLoading: false,
 
+                // Berita & Agenda
+                infoHome: null,
+                infoTab: 'berita',
+                beritaList: [], beritaTotal: 0, beritaSearch: '', beritaLoading: false,
+                agendaList: [], agendaTotal: 0, agendaMode: 'upcoming', agendaLoading: false,
+                beritaDetail: null,
+                agendaDetail: null,
+
                 confirmLogout: false,
             });
 
             onMounted(() => {
                 this._loadKpi();
                 this._loadWeeklyChart();
+                this._loadInfoHome();
                 window.addEventListener('resize', this._onWeeklyResize);
             });
 
@@ -665,6 +892,8 @@
                 'dpt-detail': 'Detail DPT',
                 'dpt-add': 'Tambah DPT',
                 'survey-add': 'Tambah Survey',
+                'berita-detail': 'Berita',
+                'agenda-detail': 'Detail Agenda',
             }[this.state.subpage] || '';
         }
         get kpiCards() {
@@ -679,6 +908,16 @@
         fmtDate(dtStr) { return fmtDate(dtStr); }
         pilihanLabel(v) { return PILIHAN_LABELS[v] || v; }
         stateLabel(v) { return STATE_LABELS[v] || v; }
+        fmtDateOnly(dtStr) { return fmtDateOnly(dtStr); }
+        fmtAgendaWaktu(mulai, selesai) { return fmtAgendaWaktu(mulai, selesai); }
+        agendaDay(dtStr) { const d = parseUtc(dtStr); return d ? d.getDate() : '-'; }
+        agendaMon(dtStr) {
+            const d = parseUtc(dtStr);
+            return d ? d.toLocaleDateString('id-ID', { month: 'short' }).replace('.', '') : '';
+        }
+        // HTML isi berita/agenda sudah di-sanitize server (fields.Html sanitize=True)
+        html(s) { return markup(s || ''); }
+        beritaImg(id, size) { return `/web/image/smartpolling.berita/${id}/gambar/${size}`; }
 
         // ── Toast ──────────────────────────────────────────────────────────
         toast(text, type = 'info') {
@@ -694,6 +933,12 @@
             if (tab === 'home') {
                 this._loadKpi();
                 this._loadWeeklyChart();
+                this._loadInfoHome();
+            }
+            if (tab === 'info') {
+                // selalu refresh supaya berita/agenda baru dari admin langsung terlihat
+                if (this.state.infoTab === 'berita') this._loadBeritaList(true);
+                else this._loadAgendaList(true);
             }
             if (tab === 'dpt' && !this.state.dptList.length) this._loadDptList(true);
             if (tab === 'survey' && !this.state.surveyList.length) this._loadSurveyList(true);
@@ -1000,6 +1245,95 @@
                 this.toast('Gagal menyimpan survey', 'error');
             } finally {
                 this.state.submitting = false;
+            }
+        }
+
+        // ── Berita & Agenda ────────────────────────────────────────────────
+        async _loadInfoHome() {
+            try {
+                const res = await rpc('/mobile/api/info/home', {});
+                if (!res.error) this.state.infoHome = res;
+            } catch (e) { console.error(e); }
+        }
+        openInfo(which) {
+            this.state.infoTab = which;
+            this.switchTab('info');
+        }
+        switchInfoTab(which) {
+            if (this.state.infoTab === which) return;
+            this.state.infoTab = which;
+            if (which === 'berita') this._loadBeritaList(true);
+            else this._loadAgendaList(true);
+        }
+        onBeritaSearchKey() {
+            clearTimeout(this._beritaSearchTimer);
+            this._beritaSearchTimer = setTimeout(() => this._loadBeritaList(true), 350);
+        }
+        async _loadBeritaList(reset) {
+            if (this.state.beritaLoading) return;
+            this.state.beritaLoading = true;
+            if (reset) this.state.beritaList = [];
+            try {
+                const res = await rpc('/mobile/api/berita/list', {
+                    offset: reset ? 0 : this.state.beritaList.length,
+                    limit: 20,
+                    search: this.state.beritaSearch || null,
+                });
+                if (res.error) { this.toast(res.error, 'error'); return; }
+                this.state.beritaList = reset ? res.records : this.state.beritaList.concat(res.records);
+                this.state.beritaTotal = res.total;
+            } catch (e) {
+                this.toast('Gagal memuat berita', 'error');
+            } finally {
+                this.state.beritaLoading = false;
+            }
+        }
+        switchAgendaMode(mode) {
+            if (this.state.agendaMode === mode) return;
+            this.state.agendaMode = mode;
+            this._loadAgendaList(true);
+        }
+        async _loadAgendaList(reset) {
+            if (this.state.agendaLoading) return;
+            this.state.agendaLoading = true;
+            if (reset) this.state.agendaList = [];
+            try {
+                const res = await rpc('/mobile/api/agenda/list', {
+                    mode: this.state.agendaMode,
+                    offset: reset ? 0 : this.state.agendaList.length,
+                    limit: 20,
+                });
+                if (res.error) { this.toast(res.error, 'error'); return; }
+                this.state.agendaList = reset ? res.records : this.state.agendaList.concat(res.records);
+                this.state.agendaTotal = res.total;
+            } catch (e) {
+                this.toast('Gagal memuat agenda', 'error');
+            } finally {
+                this.state.agendaLoading = false;
+            }
+        }
+        async openBeritaDetail(id) {
+            this.state.beritaDetail = null;
+            this.state.subpage = 'berita-detail';
+            try {
+                const res = await rpc('/mobile/api/berita/record', { berita_id: id });
+                if (res.error) throw new Error(res.error);
+                this.state.beritaDetail = res;
+            } catch (e) {
+                this.toast('Berita tidak ditemukan', 'error');
+                this.state.subpage = null;
+            }
+        }
+        async openAgendaDetail(id) {
+            this.state.agendaDetail = null;
+            this.state.subpage = 'agenda-detail';
+            try {
+                const res = await rpc('/mobile/api/agenda/record', { agenda_id: id });
+                if (res.error) throw new Error(res.error);
+                this.state.agendaDetail = res;
+            } catch (e) {
+                this.toast('Agenda tidak ditemukan', 'error');
+                this.state.subpage = null;
             }
         }
 

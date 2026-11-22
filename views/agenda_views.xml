@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_smartpolling_agenda_list" model="ir.ui.view">
+            <field name="name">agenda.list.smartpolling</field>
+            <field name="model">smartpolling.agenda</field>
+            <field name="arch" type="xml">
+                <list string="Agenda" decoration-muted="state == 'batal'">
+                    <field name="tanggal_mulai"/>
+                    <field name="tanggal_selesai" optional="show"/>
+                    <field name="name"/>
+                    <field name="lokasi"/>
+                    <field name="state" widget="badge"
+                        decoration-success="state == 'terbit'"
+                        decoration-danger="state == 'batal'"
+                        decoration-muted="state == 'draft'"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_agenda_form" model="ir.ui.view">
+            <field name="name">agenda.form.smartpolling</field>
+            <field name="model">smartpolling.agenda</field>
+            <field name="arch" type="xml">
+                <form string="Agenda">
+                    <header>
+                        <button name="action_terbitkan" string="Terbitkan" type="object"
+                            class="btn-primary" invisible="state == 'terbit'" groups="smartpolling.group_admin"/>
+                        <button name="action_batalkan" string="Batalkan Agenda" type="object"
+                            class="btn-danger" invisible="state != 'terbit'" groups="smartpolling.group_admin"/>
+                        <button name="action_draft" string="Kembalikan ke Draft" type="object"
+                            class="btn-secondary" invisible="state == 'draft'" groups="smartpolling.group_admin"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,terbit"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1><field name="name" placeholder="Nama kegiatan"/></h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="tanggal_mulai"/>
+                                <field name="tanggal_selesai"/>
+                            </group>
+                            <group>
+                                <field name="lokasi" placeholder="mis. Aula Kantor Kecamatan"/>
+                                <field name="active" invisible="1"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Deskripsi" name="deskripsi">
+                                <field name="deskripsi" widget="html" placeholder="Detail kegiatan, peserta, perlengkapan..."/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_agenda_calendar" model="ir.ui.view">
+            <field name="name">agenda.calendar.smartpolling</field>
+            <field name="model">smartpolling.agenda</field>
+            <field name="arch" type="xml">
+                <calendar string="Agenda" date_start="tanggal_mulai" date_stop="tanggal_selesai"
+                    color="state" mode="month" quick_create="0">
+                    <field name="lokasi"/>
+                    <field name="state"/>
+                </calendar>
+            </field>
+        </record>
+
+        <record id="view_smartpolling_agenda_search" model="ir.ui.view">
+            <field name="name">agenda.search.smartpolling</field>
+            <field name="model">smartpolling.agenda</field>
+            <field name="arch" type="xml">
+                <search string="Cari Agenda">
+                    <field name="name"/>
+                    <field name="lokasi"/>
+                    <separator/>
+                    <filter string="Terbit" name="filter_terbit" domain="[('state', '=', 'terbit')]"/>
+                    <filter string="Draft" name="filter_draft" domain="[('state', '=', 'draft')]"/>
+                    <filter string="Dibatalkan" name="filter_batal" domain="[('state', '=', 'batal')]"/>
+                    <separator/>
+                    <filter string="Akan Datang" name="filter_upcoming"
+                        domain="[('tanggal_mulai', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <filter string="Tanggal Mulai" name="filter_tanggal" date="tanggal_mulai"/>
+                    <filter string="Diarsipkan" name="filter_inactive" domain="[('active', '=', False)]"/>
+                    <group>
+                        <filter string="Status" name="groupby_state" context="{'group_by': 'state'}"/>
+                        <filter string="Bulan" name="groupby_bulan" context="{'group_by': 'tanggal_mulai:month'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_smartpolling_agenda" model="ir.actions.act_window">
+            <field name="name">Agenda</field>
+            <field name="res_model">smartpolling.agenda</field>
+            <field name="view_mode">calendar,list,form</field>
+            <field name="search_view_id" ref="view_smartpolling_agenda_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">Buat agenda kegiatan pertama</p>
+                <p>Agenda yang diterbitkan akan tampil di app mobile petugas.</p>
+            </field>
+        </record>
+    </data>
+</odoo>

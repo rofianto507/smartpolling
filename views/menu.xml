@@ -79,5 +79,27 @@
             action="action_smartpolling_voter"
             groups="smartpolling.group_admin,smartpolling.group_relawan,smartpolling.group_viewer"
             sequence="50"/>
+
+        <!-- Informasi: Berita & Agenda (ditampilkan ke petugas di app /mobile) -->
+        <menuitem
+            id="menu_smartpolling_informasi"
+            name="Informasi"
+            parent="menu_smartpolling_root"
+            groups="smartpolling.group_admin,smartpolling.group_viewer"
+            sequence="60"/>
+        <menuitem
+            id="menu_smartpolling_berita"
+            name="Berita"
+            parent="menu_smartpolling_informasi"
+            action="action_smartpolling_berita"
+            groups="smartpolling.group_admin,smartpolling.group_viewer"
+            sequence="1"/>
+        <menuitem
+            id="menu_smartpolling_agenda"
+            name="Agenda"
+            parent="menu_smartpolling_informasi"
+            action="action_smartpolling_agenda"
+            groups="smartpolling.group_admin,smartpolling.group_viewer"
+            sequence="2"/>
     </data>
 </odoo>
