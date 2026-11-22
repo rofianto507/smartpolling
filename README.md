@@ -2,6 +2,38 @@
 
 Modul **Odoo 19** untuk manajemen data pemenangan pemilu berbasis wilayah: pendataan relawan, TPS, Daftar Pemilih Tetap (DPT), dan survey preferensi pemilih, lengkap dengan dashboard peta interaktif dan aplikasi mobile untuk relawan lapangan.
 
+## Tampilan
+
+### Dashboard (backend)
+
+Satu halaman untuk memantau seluruh kondisi lapangan: KPI, peta sebaran DPT per wilayah, statistik survey, evaluasi event, dan agenda.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/dashboard-ringkasan.jpg" alt="Dashboard: KPI dan peta sebaran DPT"/><br/><sub><b>Ringkasan & peta</b> — KPI, peta choropleth 3 level dengan drill-down, marker cluster DPT</sub></td>
+    <td width="50%"><img src="docs/screenshots/dashboard-survey.jpg" alt="Dashboard: statistik survey"/><br/><sub><b>Statistik survey</b> — distribusi pilihan voter, survey per petugas, tren aktivitas</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/dashboard-event.jpg" alt="Dashboard: evaluasi event"/><br/><sub><b>Evaluasi event</b> — dana disetujui vs realisasi, target vs realisasi suara per event</sub></td>
+    <td width="50%"><img src="docs/screenshots/dashboard-agenda.jpg" alt="Dashboard: agenda dan berita"/><br/><sub><b>Agenda & berita</b> — kegiatan per bulan, agenda mendatang, dampak terhadap survey</sub></td>
+  </tr>
+</table>
+
+### App Mobile Relawan (`/mobile`)
+
+Dipakai relawan di lapangan lewat browser HP — tanpa perlu install dari app store.
+
+<table>
+  <tr>
+    <td width="25%"><img src="docs/screenshots/mobile-beranda.png" alt="Beranda relawan"/><br/><sub><b>Beranda</b> — KPI pribadi, pengingat berita acara, aktivitas 7 hari, agenda terdekat</sub></td>
+    <td width="25%"><img src="docs/screenshots/mobile-event.png" alt="Daftar event"/><br/><sub><b>Event</b> — pengajuan dan statusnya</sub></td>
+    <td width="25%"><img src="docs/screenshots/mobile-ajukan-event.png" alt="Form ajukan event"/><br/><sub><b>Ajukan event</b> — detail, target DPT, rincian anggaran</sub></td>
+    <td width="25%"><img src="docs/screenshots/mobile-evaluasi.png" alt="Evaluasi event"/><br/><sub><b>Evaluasi</b> — anggaran vs realisasi, target vs suara</sub></td>
+  </tr>
+</table>
+
+> Tangkapan layar memakai data demo; foto profil sudah dikaburkan.
+
 ## Fitur
 
 - **Data Wilayah** — hierarki Kabupaten/Kota → Kecamatan → Desa/Kelurahan dengan geometri GeoJSON.
@@ -62,6 +94,7 @@ Test UI app mobile memerlukan Google Chrome dan paket Python `websocket-client`;
 ```
 smartpolling/
 ├── controllers/   # route & API app mobile relawan, redirect login petugas
+├── docs/          # tangkapan layar untuk README
 ├── data/          # sequence kode TPS
 ├── migrations/    # skrip migrasi antar versi
 ├── models/        # wilayah, relawan, tps, dpt, voter, berita, agenda, event, res.users, wizard
@@ -73,4 +106,4 @@ smartpolling/
 
 ## Lisensi
 
-LGPL-3 — © CV Sel Studio
+LGPL-3 — © Fendira Studio · [fendira.net](https://fendira.net)
