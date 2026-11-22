@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/banner.jpg" alt="SmartPolling — platform data pemenangan pemilu, modul Odoo 19" width="100%"/>
+</p>
+
 # SmartPolling
 
 Modul **Odoo 19** untuk manajemen data pemenangan pemilu berbasis wilayah: pendataan relawan, TPS, Daftar Pemilih Tetap (DPT), dan survey preferensi pemilih, lengkap dengan dashboard peta interaktif dan aplikasi mobile untuk relawan lapangan.
